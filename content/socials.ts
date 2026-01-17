@@ -7,8 +7,11 @@ export type SocialLink = {
 
 export const socials: SocialLink[] = [
   { label: "Email", href: `mailto:${profile.email}` },
-  { label: "LinkedIn", href: "#" },
-  { label: "Instagram", href: "#" },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/stuart-macgregor-739359270/",
+  },
+  { label: "Instagram", href: "https://www.instagram.com/stu_macgregor/" },
 ];
 
 export const contactPage = {
