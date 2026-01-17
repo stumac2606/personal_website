@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
+import { withBasePath } from "@/lib/assetPath";
 import type {
   MediaFilterId,
   MediaItem,
@@ -326,6 +327,7 @@ function MediaRail({
               const ratio = ratioMap[item.id];
               const objectClass =
                 item.mode === "cover" ? "object-cover" : "object-contain";
+              const resolvedSrc = withBasePath(item.src);
 
               return (
                 <figure key={item.id} className="shrink-0 snap-start">
@@ -335,7 +337,7 @@ function MediaRail({
                   >
                     {item.type === "image" ? (
                       <Image
-                        src={item.src}
+                        src={resolvedSrc}
                         alt={item.title}
                         fill
                         sizes="(min-width: 1024px) 520px, (min-width: 640px) 420px, 80vw"
@@ -367,7 +369,7 @@ function MediaRail({
                         }}
                         style={{ backgroundColor: "var(--highlight)" }}
                       >
-                        <source src={item.src} />
+                        <source src={resolvedSrc} />
                         {videoFallback}
                       </video>
                     )}

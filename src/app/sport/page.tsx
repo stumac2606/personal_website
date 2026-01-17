@@ -4,6 +4,7 @@ import Section from "@/components/Section";
 import StatChip from "@/components/StatChip";
 import RankingChart from "@/components/RankingChart";
 import RankingTable from "@/components/RankingTable";
+import { withBasePath } from "@/lib/assetPath";
 import {
   challengerTitlesCount,
   sportMeta,
@@ -39,7 +40,7 @@ export default function SportPage() {
           <div className="mt-2 flex justify-end sm:mt-4">
             <div className="relative h-24 w-24 overflow-hidden rounded-full border border-border bg-highlight sm:h-28 sm:w-28 lg:h-50 lg:w-50">
               <Image
-                src={sportPage.heroImage.src}
+                src={withBasePath(sportPage.heroImage.src)}
                 alt={sportPage.heroImage.alt}
                 fill
                 sizes="(min-width: 1024px) 112px, (min-width: 640px) 96px, 80px"

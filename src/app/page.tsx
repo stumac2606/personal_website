@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Section from "@/components/Section";
 import StatChip from "@/components/StatChip";
+import { withBasePath } from "@/lib/assetPath";
 import {
   featuredHighlights,
   featuredSection,
@@ -51,7 +52,7 @@ export default function Home() {
           <div className="mt-2 flex justify-end sm:mt-6">
             <div className="relative h-20 w-20 overflow-hidden rounded-full border border-border bg-highlight sm:h-240 sm:w-24 lg:h-50 lg:w-50">
               <Image
-                src={profile.heroImageSrc}
+                src={withBasePath(profile.heroImageSrc)}
                 alt={profile.heroImageAlt}
                 fill
                 sizes="(min-width: 1024px) 112px, (min-width: 640px) 96px, 80px"

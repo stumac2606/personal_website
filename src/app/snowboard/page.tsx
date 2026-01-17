@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Section from "@/components/Section";
+import { withBasePath } from "@/lib/assetPath";
 import {
   snowboardMeta,
   snowboardPage,
@@ -65,7 +66,7 @@ export default function SnowboardPage() {
                   preload="metadata"
                   playsInline
                 >
-                  <source src={clip.src} />
+                  <source src={withBasePath(clip.src)} />
                   {mediaPage.videoFallback}
                 </video>
               </div>

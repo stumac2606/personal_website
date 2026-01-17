@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Section from "@/components/Section";
+import { withBasePath } from "@/lib/assetPath";
 import { motionHighlights } from "../../../content/highlights";
 import { workMeta, workPage } from "../../../content/projects";
 
@@ -29,7 +30,7 @@ export default function WorkPage() {
           <div className="flex justify-start lg:justify-end">
             <div className="border border-border bg-highlight px-4 py-3">
               <Image
-                src={workPage.companyLogoSrc}
+                src={withBasePath(workPage.companyLogoSrc)}
                 alt={workPage.companyLogoAlt}
                 width={220}
                 height={64}
