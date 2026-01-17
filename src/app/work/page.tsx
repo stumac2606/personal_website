@@ -37,7 +37,7 @@ export default function WorkPage() {
               width={420}
               height={126}
               sizes="(min-width: 1024px) 360px, (min-width: 640px) 260px, 220px"
-              className="h-16 w-auto object-contain sm:h-20 lg:h-24"
+              className="h-16 w-auto object-contain sm:h-40 lg:h-36"
             />
           </a>
         }
