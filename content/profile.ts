@@ -53,7 +53,6 @@ export const homeStats = [
   { id: "psaBest", label: "PSA Best" },
   { id: "latestRank", label: "Latest Rank" },
   { id: "challengerTitles", label: "Challenger Titles" },
-  { id: "tourTitles", label: "Tour Titles" },
 ] as const;
 
 export const homeBridge = {

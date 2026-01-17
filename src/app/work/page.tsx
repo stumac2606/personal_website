@@ -24,22 +24,26 @@ export default function WorkPage() {
         title={workPage.title}
         subtitle={workPage.subtitle}
         className="pt-12"
+        headerAside={
+          <a
+            href="https://motiondynamics.ai/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-end border border-border bg-highlight px-5 py-4 transition-colors hover:border-accent"
+          >
+            <Image
+              src={withBasePath(workPage.companyLogoSrc)}
+              alt={workPage.companyLogoAlt}
+              width={320}
+              height={96}
+              sizes="(min-width: 1024px) 280px, (min-width: 640px) 220px, 180px"
+              className="h-14 w-auto object-contain sm:h-16 lg:h-20"
+            />
+          </a>
+        }
+        headerClassName="items-center"
       >
-        <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr] lg:items-center">
-          <p className="text-lg text-muted">{workPage.intro}</p>
-          <div className="flex justify-start lg:justify-end">
-            <div className="border border-border bg-highlight px-4 py-3">
-              <Image
-                src={withBasePath(workPage.companyLogoSrc)}
-                alt={workPage.companyLogoAlt}
-                width={220}
-                height={64}
-                sizes="(min-width: 1024px) 220px, 160px"
-                className="h-10 w-auto object-contain"
-              />
-            </div>
-          </div>
-        </div>
+        <p className="text-lg text-muted">{workPage.intro}</p>
       </Section>
 
       <Section

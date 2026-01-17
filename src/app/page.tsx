@@ -17,7 +17,7 @@ import {
   profile,
 } from "../../content/profile";
 import { bestRank, latestRanking } from "../../content/squashRanking";
-import { challengerTitlesCount, titleWins } from "../../content/squashTitles";
+import { challengerTitlesCount } from "../../content/squashTitles";
 
 export const metadata: Metadata = {
   title: homeMeta.title,
@@ -35,7 +35,6 @@ const homeStatValues: Record<HomeStatId, number> = {
   psaBest: bestRank,
   latestRank: latestRanking.rank,
   challengerTitles: challengerTitlesCount,
-  tourTitles: titleWins.length,
 };
 
 export default function Home() {
@@ -76,6 +75,24 @@ export default function Home() {
                   {role}
                 </span>
               ))}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="https://motiondynamics.ai/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center border border-border px-4 py-2 text-xs uppercase tracking-[0.3em] text-foreground no-underline transition-colors hover:border-accent hover:text-accent"
+              >
+                Motion Dynamics
+              </a>
+              <a
+                href="https://motiondynamics.ai/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center border border-border px-4 py-2 text-xs uppercase tracking-[0.3em] text-foreground no-underline transition-colors hover:border-accent hover:text-accent"
+              >
+                Visit the Platform
+              </a>
             </div>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
