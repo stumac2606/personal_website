@@ -29,15 +29,15 @@ export default function WorkPage() {
             href="https://motiondynamics.ai/"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-end border border-border bg-highlight px-5 py-4 transition-colors hover:border-accent"
+            className="flex items-center justify-end transition-opacity hover:opacity-80"
           >
             <Image
               src={withBasePath(workPage.companyLogoSrc)}
               alt={workPage.companyLogoAlt}
-              width={320}
-              height={96}
-              sizes="(min-width: 1024px) 280px, (min-width: 640px) 220px, 180px"
-              className="h-14 w-auto object-contain sm:h-16 lg:h-20"
+              width={420}
+              height={126}
+              sizes="(min-width: 1024px) 360px, (min-width: 640px) 260px, 220px"
+              className="h-16 w-auto object-contain sm:h-20 lg:h-24"
             />
           </a>
         }

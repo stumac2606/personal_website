@@ -63,8 +63,8 @@ export default function Home() {
           </div>
         }
       >
-        <div className="grid gap-8 lg:grid-cols-[1.1fr,0.9fr] lg:items-start">
-          <div className="space-y-6">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr,0.9fr] lg:items-end">
+          <div className="flex flex-col gap-6">
             <p className="text-lg text-muted">{homeHero.lead}</p>
             <div className="flex flex-wrap gap-3 text-[0.7rem] uppercase tracking-[0.3em] text-muted">
               {profile.roles.map((role) => (
