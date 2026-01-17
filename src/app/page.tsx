@@ -95,7 +95,7 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 lg:justify-end">
+          <div className="flex w-full flex-wrap justify-start gap-3 lg:w-fit lg:justify-self-start">
             {homeStats.map((stat) => (
               <StatChip
                 key={stat.id}
