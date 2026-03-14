@@ -28,19 +28,16 @@ jobs:
           npm install -g @google/gws-cli 
 
       - name: Run Gemini Agent
-        uses: google-github-actions/run-gemini-cli@v0.1.20
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          # Switching to Flash-Lite for much higher 2026 free-tier limits
-          gemini_model: "gemini-2.5-flash-lite" 
-          # Disabling debug to prevent log overflow and save quota
-          gemini_debug: false 
-          prompt: |
+        run: |
+          npm install -g @google/gemini-cli
+          gemini --model "gemini-2.5-flash-lite" <<EOF
             Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
             1. Fetch new files from Google Drive 'Site_Updates' (including subfolders).
             2. Update content/media.ts and content/timeline.ts.
             3. Use the 'Telegram Messaging' skill to notify me of the results.
+          EOF
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: "gemini-2.5-flash-lite"
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
