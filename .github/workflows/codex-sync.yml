@@ -29,14 +29,16 @@ jobs:
       - name: Run Gemini Agent
         run: |
           npm install -g @google/gemini-cli
-          gemini --model "gemini-2.5-flash-lite" --allow-dangerous-tools <<EOF
+          # Creating the directory to avoid the ENOENT error seen in logs
+          mkdir -p ~/.gemini
+          gemini --model "gemini-2.5-flash-lite" --yolo -p "
             1. Activate the 'Telegram Messaging' skill.
             2. Activate the 'sync-drive' skill located at .agents/skills/sync-drive/SKILL.md.
             3. Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
                - Fetch new files from Google Drive 'Site_Updates'.
                - Update content/media.ts and content/timeline.ts.
                - Send a Telegram notification with the summary.
-          EOF
+          "
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: "gemini-2.5-flash-lite"
