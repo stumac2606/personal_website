@@ -29,14 +29,15 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: "gemini-2.5-flash" # Use the stable 2026 production model
+          gemini_model: "gemini-2.5-flash"
+          # Enabling debug will show exactly what the agent is thinking/trying to do
+          gemini_debug: true 
           prompt: |
-            Execute the 'Drive-to-Site Sync' routine from AGENTS.md:
-            1. Use the 'sync-drive' skill to fetch new files from Google Drive 'Site_Updates' (including subfolders).
-            2. Use folder names for event context and Gemini Vision for image/video captions.
-            3. Update content/media.ts and content/timeline.ts with the new data.
-            4. Convert assets to .webp and save to public/media/images/ or public/media/videos/.
-            5. Use the 'Telegram Messaging' skill to send me a summary of exactly what was added.
+            1. First, read the instructions in GEMINI.md.
+            2. Follow the 'Drive-to-Site Sync' routine exactly as described.
+            3. Use the 'sync-drive' skill to fetch files from Google Drive 'Site_Updates'.
+            4. Update content/media.ts and content/timeline.ts.
+            5. Report the results using the 'Telegram Messaging' skill.
         env:
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
