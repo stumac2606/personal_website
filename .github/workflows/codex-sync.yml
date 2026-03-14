@@ -30,15 +30,16 @@ jobs:
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: "gemini-2.5-flash"
-          # Enabling debug will show exactly what the agent is thinking/trying to do
+          # Explicitly pass the debug flag in the 'with' block
           gemini_debug: true 
           prompt: |
-            1. First, read the instructions in GEMINI.md.
-            2. Follow the 'Drive-to-Site Sync' routine exactly as described.
-            3. Use the 'sync-drive' skill to fetch files from Google Drive 'Site_Updates'.
-            4. Update content/media.ts and content/timeline.ts.
-            5. Report the results using the 'Telegram Messaging' skill.
+            Execute the 'Drive-to-Site Sync' routine defined in GEMINI.md:
+            1. Use the 'sync-drive' skill to fetch new files from Google Drive 'Site_Updates'.
+            2. Update content/media.ts and content/timeline.ts.
+            3. Use the 'Telegram Messaging' skill to notify me of the results.
         env:
+          # Also force the environment variable to be true
+          GEMINI_DEBUG: true
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
