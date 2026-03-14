@@ -1,46 +1,41 @@
-# Project: Personal Website (Stuart)
+# AGENTS.md
 
-## Goal
-Build a fast, professional personal website using Next.js (App Router), TypeScript, Tailwind.
-Priorities: clean layout, strong typography, great mobile responsiveness, fast load, SEO.
+## Repository Context
+- **Project Type:** Personal Portfolio / Professional Athlete & Tech Site
+- **Tech Stack:** Next.js 16 (React 19), Tailwind CSS 4, TypeScript
+- **Asset Paths:** 
+  - Images: `/public/media/images/`
+  - Videos: `/public/media/videos/`
+- **Data Files:** 
+  - Media: `/content/media.ts`
+  - Timeline: `/content/timeline.ts`
+  - Projects: `/content/projects.ts`
 
-## Style rules
-- Use Tailwind for styling (minimal custom CSS).
-- Prefer simple, readable components over complex abstractions.
-- Use accessible HTML (labels, alt text, semantic tags).
-- Keep pages lightweight; optimize images with next/image.
-- No placeholder “AI-ish” gradients unless explicitly asked.
+## Automation Routine: "Drive-to-Site Sync"
+This routine is powered by the **Gemini 1.5 Flash** model via Google AI Studio. It is triggered when new files are detected in your Google Drive.
 
-## Content sections (initial)
-- Home: hero + short intro + featured projects
-- About: bio + timeline
-- Work/Projects: cards with tags + case-study pages
-- Media: embedded video(s) and image gallery
-- Contact: email + socials
+### Step 1: Content Extraction
+- Call the `$gws-drive-fetch` tool to pull any new `.jpg`, `.png`, `.mp4`, `.mov`, or `.txt` files from your Drive folder.
+- Use Gemini's Vision capabilities to analyze new media files for SEO alt-text and categorization.
+- Extract any text content from `.txt` files to use for titles, captions, or timeline descriptions.
 
-## Commands
-- Dev: npm run dev
-- Lint: npm run lint
-- Build: npm run build
-- Start: npm run start
+### Step 2: Implementation Policy
+- **Asset Processing:** 
+  - Convert all images to `.webp` format for performance.
+  - Categorize assets into "Squash", "Tech", "Flight", "Snowboard", or "Life events".
+- **Content Updates:** 
+  - Dynamically update the `media` array in `content/media.ts`.
+  - Append new achievements to the `timeline` array in `content/timeline.ts`.
+  - Maintain strict TypeScript formatting and variable names.
+- **Optimization:** Follow Next.js 16 conventions, specifically ensuring assets are correctly linked in the public folder.
 
-## Definition of done
-- All pages responsive
-- Lighthouse-style basics: good headings, metadata, open graph
-- Clean navigation + footer
+### Step 3: Verification
+- Before committing changes, run `npm run lint` and `npm run build`.
+- Use the Playwright suite to verify that the site still renders correctly.
+- Commit changes and generate a Pull Request for review.
 
-## Default UI skill
-- For any frontend pages, layouts, or components, ALWAYS use the `frontend-design` skill.
-- Prioritise distinctive, intentional aesthetics over generic layouts.
-- Avoid default fonts, default colour palettes, and predictable component patterns.
-
-## Brand direction (must follow)
-- Positioning: athlete + technologist + snowboard instructor; bridges performance + engineering.
-- Aesthetic: “Kinetic Editorial” — magazine typography, confident whitespace, subtle athletic telemetry motifs.
-- Avoid: startup gradients, template bento blocks, generic component libraries, default fonts, “AI-looking” layouts.
-- Feel: authored, premium, human, slightly gritty (sport), but precise (tech).
-
-## Skill usage
-- Use `frontend-design` for all UI and aesthetic decisions.
-- After major UI changes, use `web-design-reviewer` to fix layout, responsiveness, and accessibility.
-
+## Mandatory Skills
+- `$gws-skills` (Google Workspace Bridge)
+- `$gemini-vision` (Advanced Image & Video Analysis)
+- `$git-agent` (For PR generation)
+- `sync-drive` (Local skill defined in `.agents/skills/sync-drive/SKILL.md`)

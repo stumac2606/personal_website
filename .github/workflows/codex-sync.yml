@@ -1,0 +1,31 @@
+name: AI Content Sync (Gemini)
+on:
+  schedule:
+    - cron: '0 9 * * *' # Runs daily at 9 AM UTC
+  workflow_dispatch:
+
+jobs:
+  gemini-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Gemini Agent
+        uses: google/gemini-action@v1 # Using the official Google Gemini Action
+        with:
+          model: "gemini-1.5-flash"
+          instructions: "Run the 'Drive-to-Site Sync' routine defined in AGENTS.md"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
