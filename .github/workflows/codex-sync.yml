@@ -8,7 +8,7 @@ jobs:
   gemini-sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Essential: Allows the agent to push code changes
+      contents: write
       pull-requests: write
     steps:
       - name: Checkout repository
@@ -26,19 +26,21 @@ jobs:
         run: npm install
 
       - name: Run Gemini Agent
+        id: gemini_sync
         uses: google/gemini-action@v1
         with:
           model: "gemini-1.5-flash"
           instructions: |
             1. Fetch new files from Google Drive 'Site_Updates'.
-            2. Use Vision to categorize images into 'Squash', 'Tech', 'Snowboard', 'Flight', or 'Life events'.
-            3. Generate SEO-friendly titles and captions for each image based on visual content.
-            4. Update content/media.ts and content/timeline.ts following existing TypeScript structures.
-            5. Convert images to .webp and save to public/media/images/.
-          # This automatically commits and pushes the changes back to your 'main' branch
-          auto_commit: true 
+            2. Categorize images and generate captions using Vision.
+            3. Update content/media.ts and content/timeline.ts.
+            4. Save processed assets to public/media/.
+            5. If updates were made, send a summary via the 'Telegram Messaging' skill.
+          auto_commit: true
           commit_message: "auto: AI Sync from Google Drive [skip ci]"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

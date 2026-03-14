@@ -29,13 +29,14 @@ This routine is powered by the **Gemini 1.5 Flash** model via Google AI Studio. 
   - Maintain strict TypeScript formatting and variable names.
 - **Optimization:** Follow Next.js 16 conventions, specifically ensuring assets are correctly linked in the public folder.
 
-### Step 3: Verification
+### Step 3: Verification & Notification
 - Before committing changes, run `npm run lint` and `npm run build`.
 - Use the Playwright suite to verify that the site still renders correctly.
-- Commit changes and generate a Pull Request for review.
+- **Notification:** After a successful sync and push, use the `Telegram Messaging` skill to send a summary of the updates (e.g., "Added 2 new squash photos and 1 tech project").
 
 ## Mandatory Skills
 - `$gws-skills` (Google Workspace Bridge)
 - `$gemini-vision` (Advanced Image & Video Analysis)
 - `$git-agent` (For PR generation)
 - `sync-drive` (Local skill defined in `.agents/skills/sync-drive/SKILL.md`)
+- `Telegram Messaging` (Global skill for status notifications)
