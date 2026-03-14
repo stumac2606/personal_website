@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -29,11 +29,13 @@ jobs:
       - name: Run Gemini Agent
         run: |
           npm install -g @google/gemini-cli
-          gemini --model "gemini-2.5-flash-lite" <<EOF
-            Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
-            1. Fetch new files from Google Drive 'Site_Updates' (including subfolders).
-            2. Update content/media.ts and content/timeline.ts.
-            3. Use the 'Telegram Messaging' skill to notify me of the results.
+          gemini --model "gemini-2.5-flash-lite" --allow-dangerous-tools <<EOF
+            1. Activate the 'Telegram Messaging' skill.
+            2. Activate the 'sync-drive' skill located at .agents/skills/sync-drive/SKILL.md.
+            3. Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
+               - Fetch new files from Google Drive 'Site_Updates'.
+               - Update content/media.ts and content/timeline.ts.
+               - Send a Telegram notification with the summary.
           EOF
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
