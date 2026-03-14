@@ -26,15 +26,16 @@ jobs:
         run: npm install
 
       - name: Run Gemini Agent
-        uses: google-github-actions/run-gemini-cli@v1
+        uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          instructions: |
+          # The 'prompt' tells the agent what to do when it wakes up
+          prompt: |
             Run the 'Drive-to-Site Sync' routine defined in AGENTS.md:
-            1. Fetch new files from Google Drive 'Site_Updates'.
-            2. Categorize images and generate captions using Vision.
+            1. Fetch new files from Google Drive 'Site_Updates' (including all subfolders).
+            2. Use folder names for event context and Vision for captions.
             3. Update content/media.ts and content/timeline.ts.
-            4. Save processed assets to public/media/.
+            4. Convert assets to .webp and save to public/media/.
             5. If updates were made, send a summary via the 'Telegram Messaging' skill.
         env:
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
