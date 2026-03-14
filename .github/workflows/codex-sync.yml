@@ -23,14 +23,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        # Added @google/gws-cli to the installation step
+        run: |
+          npm install
+          npm install -g @google/gws-cli 
 
       - name: Run Gemini Agent
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: "gemini-2.5-flash"
-          # Explicitly pass the debug flag in the 'with' block
           gemini_debug: true 
           prompt: |
             Execute the 'Drive-to-Site Sync' routine defined in GEMINI.md:
@@ -38,7 +40,6 @@ jobs:
             2. Update content/media.ts and content/timeline.ts.
             3. Use the 'Telegram Messaging' skill to notify me of the results.
         env:
-          # Also force the environment variable to be true
           GEMINI_DEBUG: true
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
