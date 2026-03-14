@@ -29,7 +29,7 @@ jobs:
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: "gemini-1.5-flash" # Explicitly use the high-quota free model
+          gemini_model: "gemini-3.1-flash-lite" # Updated 2026 model with high free quota
           prompt: |
             Execute the 'Drive-to-Site Sync' routine from AGENTS.md:
             1. Use the 'sync-drive' skill to fetch new files from Google Drive 'Site_Updates' (including subfolders).
