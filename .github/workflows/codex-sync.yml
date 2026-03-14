@@ -7,9 +7,14 @@ on:
 jobs:
   gemini-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Essential: Allows the agent to push code changes
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -21,10 +26,18 @@ jobs:
         run: npm install
 
       - name: Run Gemini Agent
-        uses: google/gemini-action@v1 # Using the official Google Gemini Action
+        uses: google/gemini-action@v1
         with:
           model: "gemini-1.5-flash"
-          instructions: "Run the 'Drive-to-Site Sync' routine defined in AGENTS.md"
+          instructions: |
+            1. Fetch new files from Google Drive 'Site_Updates'.
+            2. Use Vision to categorize images into 'Squash', 'Tech', 'Snowboard', 'Flight', or 'Life events'.
+            3. Generate SEO-friendly titles and captions for each image based on visual content.
+            4. Update content/media.ts and content/timeline.ts following existing TypeScript structures.
+            5. Convert images to .webp and save to public/media/images/.
+          # This automatically commits and pushes the changes back to your 'main' branch
+          auto_commit: true 
+          commit_message: "auto: AI Sync from Google Drive [skip ci]"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
