@@ -26,6 +26,60 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
+      - name: Restore Gemini quota guard state
+        id: gemini-quota-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gemini-quota-state
+          key: gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-${{ github.workflow }}
+          restore-keys: |
+            gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-
+
+      - name: Check Gemini daily quota guard
+        id: gemini-quota-check
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.gemini-quota-state
+          QUOTA_FILE=~/.gemini-quota-state/blocked_until
+          DEFAULT_WINDOW_SECONDS=86400
+
+          if [ -f "$QUOTA_FILE" ]; then
+            BLOCK_UNTIL="$(cat "$QUOTA_FILE")"
+            NOW="$(date +%s)"
+            if [ "$NOW" -lt "$BLOCK_UNTIL" ]; then
+              REASON_FILE=~/.gemini-quota-state/reason
+              LAST_FAIL="$(cat "$REASON_FILE" 2>/dev/null || echo "quota or API availability issue")"
+              REMAINING=$((BLOCK_UNTIL - NOW))
+              echo "quota_guard=true" >> "$GITHUB_OUTPUT"
+              echo "quota_reason=$LAST_FAIL" >> "$GITHUB_OUTPUT"
+              echo "quota_wait_seconds=$REMAINING" >> "$GITHUB_OUTPUT"
+              echo "::warning::Gemini quota guard is active for this run. Remaining cooldown: ${REMAINING}s. Reason: ${LAST_FAIL}"
+              exit 0
+            fi
+          fi
+
+          echo "quota_guard=false" >> "$GITHUB_OUTPUT"
+          echo "quota_reason=" >> "$GITHUB_OUTPUT"
+          echo "quota_wait_seconds=0" >> "$GITHUB_OUTPUT"
+
+      - name: Notify quota guard active
+        if: steps.gemini-quota-check.outputs.quota_guard == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          QUOTA_SECONDS="${{ steps.gemini-quota-check.outputs.quota_wait_seconds }}"
+          WAIT_HOURS=$(( QUOTA_SECONDS / 3600 ))
+          WAIT_MINUTES=$(( (QUOTA_SECONDS % 3600) / 60 ))
+          WAIT_SECONDS=$(( QUOTA_SECONDS % 60 ))
+          if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d chat_id="${TELEGRAM_CHAT_ID}" \
+              -d text="Drive-to-Site Sync skipped due quota guard: ${{ steps.gemini-quota-check.outputs.quota_reason }}. Try again in ${WAIT_HOURS}h ${WAIT_MINUTES}m ${WAIT_SECONDS}s."
+          else
+            echo "::warning::Telegram credentials are not configured; skip notification not sent."
+          fi
+
       - name: Check critical workflow inputs
         id: input-check
         env:
@@ -213,7 +267,7 @@ jobs:
 
       - name: Run Gemini Agent
         id: gemini-run
-        if: steps.gws-creds-check.outputs.has_creds == 'true'
+        if: steps.gws-creds-check.outputs.has_creds == 'true' && steps.gemini-quota-check.outputs.quota_guard != 'true'
         continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
@@ -293,3 +347,11 @@ jobs:
           else
             echo "::warning::Telegram credentials are not configured; cannot send failure notification."
           fi
+
+      - name: Record Gemini quota guard marker
+        if: always() && steps.gemini-run.outcome == 'failure'
+        run: |
+          mkdir -p ~/.gemini-quota-state
+          BLOCK_UNTIL=$(( $(date +%s) + 86400 ))
+          echo "$BLOCK_UNTIL" > ~/.gemini-quota-state/blocked_until
+          printf "Gemini run failed with quota/API issue or runtime CLI error" > ~/.gemini-quota-state/reason
