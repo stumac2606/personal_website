@@ -188,18 +188,53 @@ jobs:
             return files;
           };
 
-          const resolveFolderId = (name) => {
+          const resolveFolder = (name) => {
             const files = listByQuery(
               `name = '${name}' and mimeType = '${folderMime}' and trashed = false`,
             );
 
-            if (files.length !== 1) {
+            if (files.length > 1) {
               throw new Error(
-                `Expected exactly 1 Drive folder named "${name}", found ${files.length}.`,
+                `Expected at most 1 Drive folder named "${name}", found ${files.length}.`,
               );
             }
 
-            return files[0].id;
+            return files[0] || null;
+          };
+
+          const createFolder = (name, parentId) => {
+            const body = {
+              name,
+              mimeType: folderMime,
+            };
+
+            if (parentId) {
+              body.parents = [parentId];
+            }
+
+            const createdFolder = execGwsJson([
+              "drive",
+              "files",
+              "create",
+              "--params",
+              JSON.stringify({
+                supportsAllDrives: true,
+              }),
+              "--json",
+              JSON.stringify(body),
+              "--format",
+              "json",
+            ]);
+
+            if (!createdFolder.id) {
+              throw new Error(`Failed to create Drive folder "${name}".`);
+            }
+
+            console.log(
+              `Created missing Drive folder ${name} (${createdFolder.id}).`,
+            );
+
+            return createdFolder;
           };
 
           const ensureDir = (directoryPath) => {
@@ -293,8 +328,21 @@ jobs:
             }
           };
 
-          const updatesFolderId = resolveFolderId(updatesFolderName);
-          const processedFolderId = resolveFolderId(processedFolderName);
+          const updatesFolder = resolveFolder(updatesFolderName);
+          if (!updatesFolder) {
+            throw new Error(
+              `Expected exactly 1 Drive folder named "${updatesFolderName}", found 0.`,
+            );
+          }
+
+          const processedFolder =
+            resolveFolder(processedFolderName) ||
+            createFolder(
+              processedFolderName,
+              (updatesFolder.parents && updatesFolder.parents[0]) || undefined,
+            );
+          const updatesFolderId = updatesFolder.id;
+          const processedFolderId = processedFolder.id;
           walkFolder(updatesFolderId);
 
           const manifest = {
