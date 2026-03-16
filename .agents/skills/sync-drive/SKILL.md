@@ -1,11 +1,9 @@
----
 name: sync-drive
-description: Syncs assets from a specific Google Drive folder (including subfolders) to the local repo.
+description: Syncs assets from a specific Google Drive folder (including subdirectories) to the local repo.
 allowed-tools: ["gws", "git", "bash", "next", "magick"]
----
 
 # Sync Drive Logic
-1. Run `gws drive list --folder "Site_Updates" --recursive` to find all un-synced IDs in the main folder and its subdirectories.
+1. Run `gws drive files list` to find all un-synced IDs in the Drive folder.
 2. Download new files to `./temp_updates/`.
 3. For each file:
    - If image (`.jpg`, `.png`): 
