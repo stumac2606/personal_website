@@ -585,7 +585,12 @@ function insertIntoExportedArray(fileContents, exportName, objectValue) {
     throw new Error(`Could not find export ${exportName}.`);
   }
 
-  const arrayStart = fileContents.indexOf("[", markerIndex);
+  const assignmentIndex = fileContents.indexOf("=", markerIndex);
+  if (assignmentIndex === -1) {
+    throw new Error(`Could not locate assignment for export ${exportName}.`);
+  }
+
+  const arrayStart = fileContents.indexOf("[", assignmentIndex);
   if (arrayStart === -1) {
     throw new Error(`Could not locate array start for export ${exportName}.`);
   }
