@@ -97,6 +97,28 @@ export const highlights: Highlight[] = [
     tag: "moment",
     featured: true,
   },
+  {
+    id: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16",
+    area: "Motion Dynamics",
+    title: "Motion Dynamics Pitch at VentureFest 2026",
+    meta: "2026-03-16",
+    description: "Presented Motion Dynamics' core value proposition at VentureFest 2026. The objective was to articulate our systems-based approach to performance enhancement and product development.",
+    date: "2026-03-16",
+    tag: "project",
+    sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
+    sourceDate: "2026-03-16",
+  },
+  {
+    id: "6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16",
+    area: "Motion Dynamics",
+    title: "Motion Dynamics Team at VentureFest 2026",
+    meta: "2026-03-16",
+    description: "Post-presentation at VentureFest 2026. Engaging with the startup ecosystem and showcasing our engineering-driven solutions.",
+    date: "2026-03-16",
+    tag: "project",
+    sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
+    sourceDate: "2026-03-16",
+  },
 ];
 
 export const featuredSection = {

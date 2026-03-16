@@ -169,6 +169,30 @@ export const media: MediaItem[] = [
     title: "Iron swim",
     section: "Life events",
   },
+  {
+    id: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16",
+    type: "image",
+    src: "/media/images/4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16.jpg",
+    title: "Motion Dynamics Pitch at VentureFest 2026",
+    alt: "Stuart MacGregor presenting Motion Dynamics' 'Helping the world move better' pitch at VentureFest 2026.",
+    section: "Tech",
+    caption: "Presented Motion Dynamics' core value proposition at VentureFest 2026. The objective was to articulate our systems-based approach to performance enhancement and product development.",
+    sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
+    sourceDate: "2026-03-16",
+    sourceMimeType: "image/jpeg",
+  },
+  {
+    id: "6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16",
+    type: "image",
+    src: "/media/images/6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16.jpg",
+    title: "Motion Dynamics Team at VentureFest 2026",
+    alt: "The Motion Dynamics team posing for a photo at VentureFest 2026.",
+    section: "Tech",
+    caption: "Post-presentation at VentureFest 2026. Engaging with the startup ecosystem and showcasing our engineering-driven solutions.",
+    sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
+    sourceDate: "2026-03-16",
+    sourceMimeType: "image/jpeg",
+  },
 ];
 
 export const mediaFilters: Array<{
