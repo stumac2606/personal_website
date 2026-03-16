@@ -214,16 +214,34 @@ jobs:
             1. Sync all new content from the Google Drive 'Site_Updates' folder.
             2. For every new image or video, use your vision capabilities to analyze the content, determine its proper categorization (Squash, Tech, Flight, etc.), and generate SEO-optimized alt text and metadata.
             3. Autonomously identify and update all necessary data files and pages within the codebase to integrate this new content, ensuring strict TypeScript consistency and following existing architectural patterns.
-            4. For Drive operations, use the Google Workspace CLI `gws` command. Prefer existing working subcommands such as:
-               - `gws drive files list` for listing files.
-               - `gws drive files get` for pulling content.
-               - `gws drive files delete` for cleanup of processed files.
+            4. For Drive operations, use Google Workspace CLI `gws` with only supported arguments.
+               - First, resolve the Drive folder ID (without using `--folder-path`) and use parent filtering.
+               - Use one of these equivalent query flags depending on your `gws` version: `--query` or `--q`.
+
+               Example flow:
+
+               1) Detect query flag:
+                  `QUERY_FLAG='--query'`
+                  `if gws drive files list --help | grep -q -- "--q"; then QUERY_FLAG='--q'; fi`
+
+               2) Find folder ID:
+                  `SITE_ID=$(gws drive files list ${QUERY_FLAG} "name = 'Site_Updates' and mimeType = 'application/vnd.google-apps.folder' and trashed = false" --fields "files(id,name)" --format json | jq -r '.files[0].id')`
+
+               3) List files in folder:
+                  `gws drive files list ${QUERY_FLAG} "'$SITE_ID' in parents and trashed = false" --fields "files(id,name,mimeType,size)" --format json`
+
+               4) Download media/text:
+                  `gws drive files get <FILE_ID> --output temp_updates/<NAME>`.
+
+               5) After successful sync, optionally remove processed source files with:
+                  `gws drive files delete <FILE_ID>`.
+
             5. Notify me of the results:
-               - If the 'Telegram Messaging' skill is available, use it.
-               - Otherwise, use 'run_shell_command' to curl the Telegram Bot API:
-                 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-                 -d chat_id="$TELEGRAM_CHAT_ID" \
-                 -d text="Sync Complete: Updated site with new analyzed media."
+                - If the 'Telegram Messaging' skill is available, use it.
+                - Otherwise, use 'run_shell_command' to curl the Telegram Bot API:
+                  curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+                  -d chat_id="$TELEGRAM_CHAT_ID" \
+                  -d text="Sync Complete: Updated site with new analyzed media."
         env:
           GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
