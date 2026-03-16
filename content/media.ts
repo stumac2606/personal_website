@@ -193,6 +193,18 @@ export const media: MediaItem[] = [
     sourceDate: "2026-03-16",
     sourceMimeType: "image/jpeg",
   },
+  {
+    id: "snowboard-jump-2026-03-16",
+    type: "video",
+    src: "/media/videos/snowboard-jump-2026-03-16.mov",
+    title: "Penken Park Jump Progression",
+    alt: "Snowboarder launching off a large jump in Penken Park.",
+    section: "Snowboard",
+    caption: "Refining aerial control and landing mechanics in Penken Park. Consistent execution requires precise body positioning and timing, translating into measurable performance gains.",
+    sourceFilename: "Snowboard_jump.MOV",
+    sourceDate: "2026-03-16",
+    sourceMimeType: "video/quicktime",
+  },
 ];
 
 export const mediaFilters: Array<{

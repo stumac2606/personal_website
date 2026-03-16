@@ -93,4 +93,13 @@ export const timeline: TimelineItem[] = [
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
   },
+  {
+    year: "2026",
+    area: "Snowboarding",
+    title: "Penken Park Jump Progression",
+    meta: "2026-03-16",
+    description: "Refining aerial control and landing mechanics in Penken Park. Consistent execution requires precise body positioning and timing, translating into measurable performance gains.",
+    sourceFilename: "Snowboard_jump.MOV",
+    sourceDate: "2026-03-16",
+  },
 ];

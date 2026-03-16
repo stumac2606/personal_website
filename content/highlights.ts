@@ -119,6 +119,17 @@ export const highlights: Highlight[] = [
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
   },
+  {
+    id: "snowboard-jump-2026-03-16",
+    area: "Snowboarding",
+    title: "Penken Park Jump Progression",
+    meta: "2026-03-16",
+    description: "Refining aerial control and landing mechanics in Penken Park. Consistent execution requires precise body positioning and timing, translating into measurable performance gains.",
+    date: "2026-03-16",
+    tag: "moment",
+    sourceFilename: "Snowboard_jump.MOV",
+    sourceDate: "2026-03-16",
+  },
 ];
 
 export const featuredSection = {
