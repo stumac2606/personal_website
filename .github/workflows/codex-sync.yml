@@ -10,6 +10,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      # Force the model at the job level to override any Action defaults
+      GEMINI_MODEL: "gemini-2.5-flash-lite"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -27,21 +30,17 @@ jobs:
           npm install
 
       - name: Run Gemini Agent
-        run: |
-          npm install -g @google/gemini-cli
-          # Creating the directory to avoid the ENOENT error seen in logs
-          mkdir -p ~/.gemini
-          gemini --model "gemini-2.5-flash-lite" --yolo -p "
-            1. Activate the 'Telegram Messaging' skill.
-            2. Activate the 'sync-drive' skill located at .agents/skills/sync-drive/SKILL.md.
-            3. Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
-               - Fetch new files from Google Drive 'Site_Updates'.
-               - Update content/media.ts and content/timeline.ts.
-               - Send a Telegram notification with the summary.
-          "
+        uses: google-github-actions/run-gemini-cli@v0.1.20
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: "gemini-2.5-flash-lite"
+          gemini_debug: false
+          prompt: |
+            Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
+            1. Fetch new files from Google Drive 'Site_Updates'.
+            2. Update content/media.ts and content/timeline.ts.
+            3. Use the 'Telegram Messaging' skill to notify me of the results.
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: "gemini-2.5-flash-lite"
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
