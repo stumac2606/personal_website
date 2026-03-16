@@ -14,6 +14,7 @@ jobs:
       GEMINI_MODEL: "gemini-2.5-flash-lite"
       GWS_CLI_PACKAGE: "@googleworkspace/cli"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      GEMINI_QUOTA_STATE_DIR: "${{ github.workspace }}/.gemini-quota-state"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -30,7 +31,7 @@ jobs:
         id: gemini-quota-cache
         uses: actions/cache@v4
         with:
-          path: ~/.gemini-quota-state
+          path: ${{ github.workspace }}/.gemini-quota-state
           key: gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-${{ github.workflow }}
           restore-keys: |
             gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-
@@ -39,15 +40,15 @@ jobs:
         id: gemini-quota-check
         run: |
           set -euo pipefail
-          mkdir -p ~/.gemini-quota-state
-          QUOTA_FILE=~/.gemini-quota-state/blocked_until
+          mkdir -p "${GEMINI_QUOTA_STATE_DIR}"
+          QUOTA_FILE="${GEMINI_QUOTA_STATE_DIR}/blocked_until"
+          REASON_FILE="${GEMINI_QUOTA_STATE_DIR}/reason"
           DEFAULT_WINDOW_SECONDS=86400
 
           if [ -f "$QUOTA_FILE" ]; then
             BLOCK_UNTIL="$(cat "$QUOTA_FILE")"
             NOW="$(date +%s)"
             if [ "$NOW" -lt "$BLOCK_UNTIL" ]; then
-              REASON_FILE=~/.gemini-quota-state/reason
               LAST_FAIL="$(cat "$REASON_FILE" 2>/dev/null || echo "quota or API availability issue")"
               REMAINING=$((BLOCK_UNTIL - NOW))
               echo "quota_guard=true" >> "$GITHUB_OUTPUT"
@@ -346,7 +347,7 @@ jobs:
       - name: Record Gemini quota guard marker
         if: always() && steps.gemini-run.outcome == 'failure'
         run: |
-          mkdir -p ~/.gemini-quota-state
+          mkdir -p "${GEMINI_QUOTA_STATE_DIR}"
           BLOCK_UNTIL=$(( $(date +%s) + 86400 ))
-          echo "$BLOCK_UNTIL" > ~/.gemini-quota-state/blocked_until
-          printf "Gemini run failed with quota/API issue or runtime CLI error" > ~/.gemini-quota-state/reason
+          echo "$BLOCK_UNTIL" > "${GEMINI_QUOTA_STATE_DIR}/blocked_until"
+          printf "Gemini run failed with quota/API issue or runtime CLI error" > "${GEMINI_QUOTA_STATE_DIR}/reason"
