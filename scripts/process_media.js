@@ -48,7 +48,16 @@ const HIGHLIGHT_TAG_VALUES = [
 ];
 const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\nUse first-person website voice. For personal sport and life updates, prefer "I" and "my". For Motion Dynamics or company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", or "the team" unless another team is explicitly shown.\n\nFolder names and relative paths are context hints. Use them to infer what the asset is about when they are helpful, but do not mention internal folder names unless they are genuinely meaningful to the website copy.\n\nFor each item:\n1. Analyze the content.\n2. Write a human title that fits on a website card. Never reuse a raw filename, UUID, or hash as the title.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life events" and timeline_area="Life events".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life events" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life events" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
+const BRAND_GUIDE =
+  "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.
+- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.
+- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.
+- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.
+- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.
+- Business copy should sound like product proof and operator judgement, not startup theatre.
+- Personal copy should sound like lived experience, progression, craft, and clear standards.
+\nFolder names and relative paths are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life events" and timeline_area="Life events".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life events" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life events" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -172,8 +181,15 @@ async function main() {
   for (const update of parsedResponse.updates) {
     const sourceFile = manifestByFilename.get(update.filename);
     const stableId = buildStableId(update.filename, update.date);
-    const title = sanitizeGeneratedTitle(update.title, sourceFile?.filename);
     const inferredContext = inferContextFromPath(sourceFile);
+    const brandContext = getBrandContext(inferredContext);
+    const title = sanitizeGeneratedTitle(
+      update.title,
+      sourceFile?.filename,
+      sourceFile?.localRelativePath,
+    );
+    const contentText = normalizeGeneratedCopy(update.content_text, brandContext);
+    const altText = normalizeAltText(update.alt_text, title, brandContext);
     const gallerySection = resolvePlacement(
       update.gallery_section,
       inferredContext.gallerySection,
@@ -222,9 +238,9 @@ async function main() {
             type: mediaAsset.type,
             src: mediaAsset.sitePath,
             title,
-            alt: update.alt_text,
+            alt: altText,
             section: gallerySection,
-            caption: update.content_text,
+            caption: contentText,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
             sourceMimeType: sourceFile.mimeType,
@@ -272,7 +288,7 @@ async function main() {
             area: timelineArea,
             title,
             meta: update.date,
-            description: update.content_text,
+            description: contentText,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
           },
@@ -316,7 +332,7 @@ async function main() {
             area: highlightArea,
             title,
             meta: update.date,
-            description: update.content_text,
+            description: contentText,
             date: update.date,
             tag: highlightTag,
             sourceFilename: sourceFile.filename,
@@ -490,7 +506,9 @@ async function sendGeminiRequest(batchFiles) {
         "",
         "Return one update object for every file above.",
         "The filename in each update must exactly match one of the filenames listed in the manifest.",
-        "If a file is text, use the supplied text content. If it is binary, inspect the supplied asset data.",
+        "If a file is text, use the supplied text content.",
+        "If a file is an image, inspect the supplied image data and path context.",
+        "If a file is a video, rely on the relative path, folder title, and filename as the primary source of truth. Do not invent frame-level details that are not explicit in that context.",
       ].join("\n"),
     },
   ];
@@ -509,9 +527,18 @@ async function sendGeminiRequest(batchFiles) {
       continue;
     }
 
+    const folderTitleHint = extractDescriptiveFolderName(file.localRelativePath);
+
+    if (isVideoFile(file)) {
+      parts.push({
+        text: `Video file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}\nUse the folder title hint and relative path as the primary context for title, copy, and placement. Do not rely on unseen video frames.`,
+      });
+      continue;
+    }
+
     const binary = fs.readFileSync(file.absolutePath);
     parts.push({
-      text: `Binary file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nMIME type: ${file.mimeType}`,
+      text: `Binary file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}`,
     });
     parts.push({
       inlineData: {
@@ -537,7 +564,7 @@ async function sendGeminiRequest(batchFiles) {
         },
       ],
       generationConfig: {
-        temperature: 0.2,
+        temperature: 0.1,
         responseMimeType: "application/json",
         responseSchema: RESPONSE_SCHEMA,
       },
@@ -750,9 +777,11 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function sanitizeGeneratedTitle(title, fallbackFilename) {
+function sanitizeGeneratedTitle(title, fallbackFilename, relativePath) {
   const normalized = (title || "").replace(/\s+/g, " ").trim();
-  const fallbackTitle = humanizeFilename(fallbackFilename || "update");
+  const fallbackTitle =
+    extractDescriptiveFolderName(relativePath) ||
+    humanizeFilename(fallbackFilename || "update");
 
   if (!normalized) {
     return fallbackTitle;
@@ -768,7 +797,89 @@ function sanitizeGeneratedTitle(title, fallbackFilename) {
     return fallbackTitle;
   }
 
+  if (
+    /^(image|photo|video|clip|presentation|update|team photo|group photo)$/i.test(
+      normalized,
+    )
+  ) {
+    return fallbackTitle;
+  }
+
   return normalized;
+}
+
+function extractDescriptiveFolderName(relativePath) {
+  const normalizedPath = normalizePath(relativePath || "");
+  const directory = path.posix.dirname(normalizedPath);
+
+  if (!directory || directory === ".") {
+    return "";
+  }
+
+  const segments = directory
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const lastSegment = segments[segments.length - 1];
+
+  if (!lastSegment || /^(images?|videos?|uploads?|temp_media)$/i.test(lastSegment)) {
+    return "";
+  }
+
+  return humanizeFilename(lastSegment).replace(/\bAnd\b/g, "and");
+}
+
+function getBrandContext(inferredContext) {
+  if (
+    inferredContext.highlightArea === "Motion Dynamics" ||
+    inferredContext.timelineArea === "Motion Dynamics" ||
+    inferredContext.gallerySection === "Tech"
+  ) {
+    return "company";
+  }
+
+  return "personal";
+}
+
+function normalizeGeneratedCopy(text, brandContext) {
+  const cleaned = (text || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?;:])/g, "$1")
+    .replace(/\.{2,}/g, ".")
+    .trim();
+
+  let normalized = cleaned;
+  const replacements = [
+    [/\bkey performance indicator\b/gi, "useful marker"],
+    [/\boutreach and networking strategy\b/gi, "commercial progress"],
+    [/\bcutting-edge\b/gi, "practical"],
+    [/\bgame-changing\b/gi, "meaningful"],
+    [/\bworld-class\b/gi, "high-standard"],
+    [/\brevolutionary\b/gi, "useful"],
+  ];
+
+  for (const [pattern, value] of replacements) {
+    normalized = normalized.replace(pattern, value);
+  }
+
+  if (brandContext === "company") {
+    normalized = normalized
+      .replace(/\b[Tt]he team\b/g, "our team")
+      .replace(/\b[Tt]he company\b/g, "we")
+      .replace(/\b[Tt]heir\b/g, "our")
+      .replace(/\b[Tt]hem\b/g, "us")
+      .replace(/\b[Tt]hey\b/g, "we");
+  }
+
+  return normalized.trim();
+}
+
+function normalizeAltText(text, title, brandContext) {
+  const cleaned = normalizeGeneratedCopy(text, brandContext);
+  if (!cleaned) {
+    return title;
+  }
+  return cleaned;
 }
 
 function inferContextFromPath(file) {
