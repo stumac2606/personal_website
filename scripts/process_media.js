@@ -581,11 +581,13 @@ function hasExistingMarker(fileContents, marker) {
 }
 
 function insertIntoExportedArray(fileContents, exportName, objectValue) {
-  const marker = `export const ${exportName}`;
-  const markerIndex = fileContents.indexOf(marker);
-  if (markerIndex === -1) {
+  const markerMatch = fileContents.match(
+    new RegExp(`export const\\s+${escapeRegex(exportName)}\\s*(?::|=)`),
+  );
+  if (!markerMatch || markerMatch.index === undefined) {
     throw new Error(`Could not find export ${exportName}.`);
   }
+  const markerIndex = markerMatch.index;
 
   const assignmentIndex = fileContents.indexOf("=", markerIndex);
   if (assignmentIndex === -1) {
@@ -647,6 +649,10 @@ function findMatchingBracket(fileContents, startIndex, openChar, closeChar) {
   }
 
   throw new Error(`Could not find matching ${closeChar} for export array.`);
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function formatObjectLiteral(objectValue, indent) {
