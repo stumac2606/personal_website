@@ -17,7 +17,7 @@ const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY || "")}`;
 const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for my website.\n\n${STYLE_GUIDE}\n\nI am providing you with a batch of new images and text files. For each item:\n1. Analyze the content.\n2. Write a short paragraph or sentence interpreting the content in the exact style requested above. Generate SEO alt-text for images.\n3. Decide where this content belongs. The ONLY valid destinations are: media (for general photos/videos), events (for highlights/milestones), or tech (for coding/hardware stuff).\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "destination": "media" | "events" | "tech",\n      "filename": "original_filename.jpg",\n      "alt_text": "...",\n      "content_text": "Your stylized interpretation here",\n      "date": "YYYY-MM-DD"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for my website.\n\n${STYLE_GUIDE}\n\nI am providing you with a batch of new images and text files. For each item:\n1. Analyze the content.\n2. Write a short paragraph or sentence interpreting the content in the exact style requested above. Generate SEO alt-text for images.\n3. Decide where this content belongs. The ONLY valid destinations are: media (for general photos/videos), events (for highlights/milestones), or tech (for coding/hardware stuff).\n\nFolder names and relative paths are context hints. Use them to infer what the asset is about when they are helpful, but do not mention internal folder names unless they are genuinely meaningful to the website copy.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "destination": "media" | "events" | "tech",\n      "filename": "original_filename.jpg",\n      "alt_text": "...",\n      "content_text": "Your stylized interpretation here",\n      "date": "YYYY-MM-DD"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -416,7 +416,9 @@ async function sendGeminiRequest(batchFiles) {
           const sourceDate = file.modifiedTime
             ? String(file.modifiedTime).slice(0, 10)
             : "unknown";
-          return `${index + 1}. filename=\"${file.filename}\", mimeType=\"${file.mimeType}\", originalMimeType=\"${file.originalMimeType}\", sourceDate=\"${sourceDate}\"`;
+          const relativePath = file.localRelativePath || file.filename;
+          const folderContext = path.posix.dirname(relativePath);
+          return `${index + 1}. filename=\"${file.filename}\", relativePath=\"${relativePath}\", folderContext=\"${folderContext === "." ? "" : folderContext}\", mimeType=\"${file.mimeType}\", originalMimeType=\"${file.originalMimeType}\", sourceDate=\"${sourceDate}\"`;
         }),
         "",
         "Return one update object for every file above.",
@@ -435,14 +437,14 @@ async function sendGeminiRequest(batchFiles) {
         : normalizedText;
 
       parts.push({
-        text: `Text file: ${file.filename}\nMIME type: ${file.mimeType}\nContents:\n${truncatedText}`,
+        text: `Text file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nMIME type: ${file.mimeType}\nContents:\n${truncatedText}`,
       });
       continue;
     }
 
     const binary = fs.readFileSync(file.absolutePath);
     parts.push({
-      text: `Binary file: ${file.filename}\nMIME type: ${file.mimeType}`,
+      text: `Binary file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nMIME type: ${file.mimeType}`,
     });
     parts.push({
       inlineData: {

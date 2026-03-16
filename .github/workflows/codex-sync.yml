@@ -382,12 +382,29 @@ jobs:
           set -euo pipefail
           : > "${PROCESS_LOG_PATH}"
           echo "Starting Gemini processing..." | tee -a "${PROCESS_LOG_PATH}"
+          set +e
           node scripts/process_media.js 2>&1 | tee -a "${PROCESS_LOG_PATH}"
+          NODE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if [ "${NODE_EXIT}" -ne 0 ]; then
+            if grep -qE 'Gemini request failed \(429\)|RESOURCE_EXHAUSTED|generate_content_free_tier_requests' "${PROCESS_LOG_PATH}"; then
+              echo "Gemini quota exceeded. Skipping this run without mutating repository state." | tee -a "${PROCESS_LOG_PATH}"
+              echo "status=quota_skipped" >> "$GITHUB_OUTPUT"
+              echo "quota_skipped=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+            exit "${NODE_EXIT}"
+          fi
+
           echo "Finished Gemini processing." | tee -a "${PROCESS_LOG_PATH}"
+          echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: Build updated site
         id: site-build
-        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success'
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success'
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -398,7 +415,7 @@ jobs:
 
       - name: Commit and push generated updates
         id: commit-push
-        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success'
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success'
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -421,7 +438,7 @@ jobs:
 
       - name: Move processed Drive files
         id: move-processed
-        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success'
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success'
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -482,7 +499,7 @@ jobs:
           git reset --hard "${{ steps.checkout-head.outputs.sha }}"
 
       - name: Send Telegram success notification
-        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.move-processed.outcome == 'success'
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.move-processed.outcome == 'success'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -520,6 +537,18 @@ jobs:
             MESSAGE="${MESSAGE} No repository diff was created."
           fi
 
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${MESSAGE}"
+
+      - name: Send Telegram quota skip notification
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'quota_skipped'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          MESSAGE="Drive-to-Site Sync skipped because the Gemini API quota for ${GEMINI_MODEL} is exhausted. Source files were left in Site_Updates for a later retry."
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             --data-urlencode text="${MESSAGE}"
