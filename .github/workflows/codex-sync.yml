@@ -8,6 +8,7 @@ jobs:
   gemini-sync:
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
     env:
       GEMINI_MODEL: "gemini-2.5-flash-lite"
@@ -436,6 +437,24 @@ jobs:
           echo "committed=true" >> "$GITHUB_OUTPUT"
           echo "Successfully pushed changes to main." | tee -a "${COMMIT_LOG_PATH}"
 
+      - name: Dispatch GitHub Pages deploy
+        id: dispatch-deploy
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.commit-push.outputs.committed == 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching deploy workflow..."
+          curl -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "dispatched=true" >> "$GITHUB_OUTPUT"
+          echo "Deploy workflow dispatched."
+
       - name: Move processed Drive files
         id: move-processed
         if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success'
@@ -499,7 +518,7 @@ jobs:
           git reset --hard "${{ steps.checkout-head.outputs.sha }}"
 
       - name: Send Telegram success notification
-        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.move-processed.outcome == 'success'
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outputs.status == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.move-processed.outcome == 'success' && (steps.commit-push.outputs.committed != 'true' || steps.dispatch-deploy.outcome == 'success')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -539,7 +558,7 @@ jobs:
           MESSAGE="Drive-to-Site Sync complete. Downloaded ${FILE_COUNT} files, appended ${APPENDED_COUNT} updates, skipped ${SKIPPED_COUNT} duplicates, build passed, and archived processed Drive files."
 
           if [ "${COMMITTED}" = "true" ]; then
-            MESSAGE="${MESSAGE} Changes were pushed to main."
+            MESSAGE="${MESSAGE} Changes were pushed to main and the deploy workflow was dispatched."
           else
             MESSAGE="${MESSAGE} No repository diff was created."
           fi
@@ -565,7 +584,7 @@ jobs:
             --data-urlencode text="${MESSAGE}"
 
       - name: Send Telegram failure notification
-        if: always() && steps.input-check.outputs.telegram_configured == 'true' && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.move-processed.outcome == 'failure')
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.dispatch-deploy.outcome == 'failure' || steps.move-processed.outcome == 'failure')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -586,6 +605,9 @@ jobs:
           elif [ "${{ steps.commit-push.outcome }}" = "failure" ]; then
             FAILED_STAGE="commit/push"
             LOG_PATH="${COMMIT_LOG_PATH}"
+          elif [ "${{ steps.dispatch-deploy.outcome }}" = "failure" ]; then
+            FAILED_STAGE="deploy dispatch"
+            LOG_PATH="${COMMIT_LOG_PATH}"
           elif [ "${{ steps.move-processed.outcome }}" = "failure" ]; then
             FAILED_STAGE="Drive cleanup"
             LOG_PATH="${MOVE_LOG_PATH}"
@@ -603,5 +625,5 @@ jobs:
             --data-urlencode text="${MESSAGE}"
 
       - name: Exit workflow on failure
-        if: always() && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.move-processed.outcome == 'failure')
+        if: always() && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.dispatch-deploy.outcome == 'failure' || steps.move-processed.outcome == 'failure')
         run: exit 1

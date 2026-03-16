@@ -20,7 +20,7 @@ const GALLERY_SECTION_VALUES = [
   "Tech",
   "Flight",
   "Snowboard",
-  "Life events",
+  "Life in Motion",
   "none",
 ];
 const TIMELINE_AREA_VALUES = [
@@ -28,7 +28,7 @@ const TIMELINE_AREA_VALUES = [
   "Motion Dynamics",
   "Snowboarding",
   "Paragliding",
-  "Life events",
+  "Life in Motion",
   "none",
 ];
 const HIGHLIGHT_AREA_VALUES = [
@@ -50,14 +50,7 @@ const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
 const BRAND_GUIDE =
   "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.
-- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.
-- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.
-- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.
-- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.
-- Business copy should sound like product proof and operator judgement, not startup theatre.
-- Personal copy should sound like lived experience, progression, craft, and clear standards.
-\nFolder names and relative paths are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life events" and timeline_area="Life events".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life events" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life events" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -139,18 +132,39 @@ async function main() {
       throw new Error(`File ${file.relativePath} is missing from manifest.json.`);
     }
     return { ...manifestEntry, absolutePath: file.absolutePath };
-  });
+  }).sort((left, right) => left.localRelativePath.localeCompare(right.localRelativePath));
 
-  const duplicateNames = findDuplicateNames(batchFiles.map((file) => file.filename));
+  const batchContext = buildBatchContext(batchFiles);
+  const processableFiles = batchFiles.filter(
+    (file) => !batchContext.contextOnlyFiles.has(file.localRelativePath),
+  );
+
+  const duplicateNames = findDuplicateNames(
+    processableFiles.map((file) => file.filename),
+  );
   if (duplicateNames.length > 0) {
     throw new Error(
       `Duplicate filenames in batch are not supported: ${duplicateNames.join(", ")}`,
     );
   }
 
-  console.log(`Sending ${batchFiles.length} files to Gemini.`);
+  if (processableFiles.length === 0) {
+    const summary = {
+      model: GEMINI_MODEL,
+      appended: [],
+      skipped: [],
+      copiedAssets: [],
+      items: [],
+      modifiedFiles: [],
+    };
+    fs.writeFileSync(RESULTS_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+    console.log("No processable files remained after applying folder note context.");
+    return;
+  }
+
+  console.log(`Sending ${processableFiles.length} files to Gemini.`);
   console.log("Dispatching Gemini API request...");
-  const rawGeminiResponse = await sendGeminiRequest(batchFiles);
+  const rawGeminiResponse = await sendGeminiRequest(processableFiles, batchContext);
   console.log("Received Gemini API response.");
   console.log(
     "Raw Gemini response JSON:",
@@ -159,7 +173,7 @@ async function main() {
 
   const responseText = extractGeminiText(rawGeminiResponse);
   const parsedResponse = JSON.parse(responseText);
-  validateGeminiResponse(parsedResponse, batchFiles);
+  validateGeminiResponse(parsedResponse, processableFiles);
 
   const mediaState = fs.readFileSync(MEDIA_TS_PATH, "utf8");
   const timelineState = fs.readFileSync(TIMELINE_TS_PATH, "utf8");
@@ -174,21 +188,28 @@ async function main() {
   const skipped = [];
   const copiedAssets = [];
   const itemSummaries = new Map();
+  const createdTimelineEvents = new Set();
+  const createdHighlightEvents = new Set();
   const manifestByFilename = new Map(
-    batchFiles.map((file) => [file.filename, file]),
+    processableFiles.map((file) => [file.filename, file]),
   );
 
   for (const update of parsedResponse.updates) {
     const sourceFile = manifestByFilename.get(update.filename);
     const stableId = buildStableId(update.filename, update.date);
     const inferredContext = inferContextFromPath(sourceFile);
+    const sourceFolder = getSourceFolder(sourceFile);
     const brandContext = getBrandContext(inferredContext);
     const title = sanitizeGeneratedTitle(
       update.title,
       sourceFile?.filename,
       sourceFile?.localRelativePath,
     );
-    const contentText = normalizeGeneratedCopy(update.content_text, brandContext);
+    const contentText = normalizeGeneratedCopy(
+      update.content_text,
+      brandContext,
+      title,
+    );
     const altText = normalizeAltText(update.alt_text, title, brandContext);
     const gallerySection = resolvePlacement(
       update.gallery_section,
@@ -270,14 +291,23 @@ async function main() {
 
     if (timelineArea !== "none") {
       const currentTimeline = fileStates.get(TIMELINE_TS_PATH);
+      const timelineEventKey = buildPlacementEventKey(
+        "timeline",
+        timelineArea,
+        update.date,
+        sourceFolder,
+        sourceFile,
+      );
 
       if (
-        hasSourceDateMarker(currentTimeline, sourceFile.filename, update.date)
+        hasSourceDateMarker(currentTimeline, sourceFile.filename, update.date) ||
+        hasExistingFolderEvent(currentTimeline, sourceFolder, update.date) ||
+        createdTimelineEvents.has(timelineEventKey)
       ) {
         skipped.push({
           destination: "timeline",
           filename: sourceFile.filename,
-          reason: "Duplicate timeline entry detected.",
+          reason: "Duplicate timeline entry detected for this event.",
         });
       } else {
         const nextTimeline = insertIntoExportedArray(
@@ -291,11 +321,13 @@ async function main() {
             description: contentText,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
+            sourceFolder,
           },
         );
 
         fileStates.set(TIMELINE_TS_PATH, nextTimeline);
         touchedFiles.add(TIMELINE_TS_PATH);
+        createdTimelineEvents.add(timelineEventKey);
         appended.push({
           destination: "timeline",
           filename: sourceFile.filename,
@@ -317,11 +349,22 @@ async function main() {
 
     if (highlightArea !== "none") {
       const currentHighlights = fileStates.get(HIGHLIGHTS_TS_PATH);
-      if (hasSourceDateMarker(currentHighlights, sourceFile.filename, update.date)) {
+      const highlightEventKey = buildPlacementEventKey(
+        "highlights",
+        highlightArea,
+        update.date,
+        sourceFolder,
+        sourceFile,
+      );
+      if (
+        hasSourceDateMarker(currentHighlights, sourceFile.filename, update.date) ||
+        hasExistingFolderEvent(currentHighlights, sourceFolder, update.date) ||
+        createdHighlightEvents.has(highlightEventKey)
+      ) {
         skipped.push({
           destination: "highlights",
           filename: sourceFile.filename,
-          reason: "Duplicate highlight entry detected.",
+          reason: "Duplicate highlight entry detected for this event.",
         });
       } else {
         const nextHighlights = insertIntoExportedArray(
@@ -337,11 +380,13 @@ async function main() {
             tag: highlightTag,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
+            sourceFolder,
           },
         );
 
         fileStates.set(HIGHLIGHTS_TS_PATH, nextHighlights);
         touchedFiles.add(HIGHLIGHTS_TS_PATH);
+        createdHighlightEvents.add(highlightEventKey);
         appended.push({
           destination: "highlights",
           filename: sourceFile.filename,
@@ -404,6 +449,51 @@ function walkDirectory(startDir, rootDir = startDir) {
   }
 
   return results;
+}
+
+function buildBatchContext(batchFiles) {
+  const folders = new Map();
+
+  for (const file of batchFiles) {
+    const folderKey = getSourceFolder(file);
+    const current = folders.get(folderKey) || {
+      mediaFiles: [],
+      textFiles: [],
+    };
+
+    if (isTextLike(file)) {
+      current.textFiles.push(file);
+    } else {
+      current.mediaFiles.push(file);
+    }
+
+    folders.set(folderKey, current);
+  }
+
+  const contextOnlyFiles = new Set();
+  const folderNotesByFolder = new Map();
+
+  for (const [folderKey, value] of folders.entries()) {
+    if (value.mediaFiles.length === 0 || value.textFiles.length === 0) {
+      continue;
+    }
+
+    const noteParts = value.textFiles.map((file) => {
+      const textContent = fs.readFileSync(file.absolutePath, "utf8").trim();
+      const concise = textContent.length > 2000
+        ? `${textContent.slice(0, 2000)}\n[TRUNCATED]`
+        : textContent;
+      contextOnlyFiles.add(file.localRelativePath);
+      return `Note from ${file.filename}:\n${concise}`;
+    });
+
+    folderNotesByFolder.set(folderKey, noteParts.join("\n\n"));
+  }
+
+  return {
+    contextOnlyFiles,
+    folderNotesByFolder,
+  };
 }
 
 function normalizePath(value) {
@@ -490,7 +580,7 @@ function getPreferredExtension(absolutePath, mimeType) {
   return extensionMap[mimeType] || ".bin";
 }
 
-async function sendGeminiRequest(batchFiles) {
+async function sendGeminiRequest(batchFiles, batchContext) {
   const parts = [
     {
       text: [
@@ -514,6 +604,10 @@ async function sendGeminiRequest(batchFiles) {
   ];
 
   for (const file of batchFiles) {
+    const folderNotes = batchContext.folderNotesByFolder.get(
+      getSourceFolder(file),
+    );
+
     if (isTextLike(file)) {
       const textContent = fs.readFileSync(file.absolutePath, "utf8");
       const normalizedText = textContent.trim();
@@ -531,14 +625,14 @@ async function sendGeminiRequest(batchFiles) {
 
     if (isVideoFile(file)) {
       parts.push({
-        text: `Video file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}\nUse the folder title hint and relative path as the primary context for title, copy, and placement. Do not rely on unseen video frames.`,
+        text: `Video file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}\n${folderNotes ? `Folder notes:\n${folderNotes}\n` : ""}Use the folder title hint, sidecar notes, and relative path as the primary context for title, copy, and placement. Do not rely on unseen video frames.`,
       });
       continue;
     }
 
     const binary = fs.readFileSync(file.absolutePath);
     parts.push({
-      text: `Binary file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}`,
+      text: `Binary file: ${file.filename}\nRelative path: ${file.localRelativePath || file.filename}\nFolder title hint: ${folderTitleHint || "none"}\nMIME type: ${file.mimeType}\n${folderNotes ? `Folder notes:\n${folderNotes}` : ""}`,
     });
     parts.push({
       inlineData: {
@@ -808,6 +902,16 @@ function sanitizeGeneratedTitle(title, fallbackFilename, relativePath) {
   return normalized;
 }
 
+function getSourceFolder(file) {
+  if (!file) {
+    return "";
+  }
+
+  const relativePath = normalizePath(file.localRelativePath || "");
+  const directory = path.posix.dirname(relativePath);
+  return directory === "." ? "" : directory;
+}
+
 function extractDescriptiveFolderName(relativePath) {
   const normalizedPath = normalizePath(relativePath || "");
   const directory = path.posix.dirname(normalizedPath);
@@ -841,7 +945,7 @@ function getBrandContext(inferredContext) {
   return "personal";
 }
 
-function normalizeGeneratedCopy(text, brandContext) {
+function normalizeGeneratedCopy(text, brandContext, title) {
   const cleaned = (text || "")
     .replace(/\s+/g, " ")
     .replace(/\s+([,.!?;:])/g, "$1")
@@ -862,6 +966,11 @@ function normalizeGeneratedCopy(text, brandContext) {
     normalized = normalized.replace(pattern, value);
   }
 
+  if (title) {
+    const titlePattern = new RegExp(`^${escapeRegex(title)}[:\\-.,\\s]+`, "i");
+    normalized = normalized.replace(titlePattern, "");
+  }
+
   if (brandContext === "company") {
     normalized = normalized
       .replace(/\b[Tt]he team\b/g, "our team")
@@ -869,6 +978,17 @@ function normalizeGeneratedCopy(text, brandContext) {
       .replace(/\b[Tt]heir\b/g, "our")
       .replace(/\b[Tt]hem\b/g, "us")
       .replace(/\b[Tt]hey\b/g, "we");
+  }
+
+  normalized = normalized
+    .split(/(?<=[.!?])\s+/)
+    .filter(Boolean)[0] || normalized;
+
+  normalized = shortenToWordLimit(normalized, 22);
+  normalized = normalized.replace(/\s+/g, " ").trim();
+
+  if (normalized && !/[.!?]$/.test(normalized)) {
+    normalized = `${normalized}.`;
   }
 
   return normalized.trim();
@@ -918,10 +1038,25 @@ function inferContextFromPath(file) {
   }
 
   return {
-    gallerySection: isImageOrVideo(file) ? "Life events" : "none",
-    timelineArea: "Life events",
+    gallerySection: isImageOrVideo(file) ? "Life in Motion" : "none",
+    timelineArea: "Life in Motion",
     highlightArea: "none",
   };
+}
+
+function buildPlacementEventKey(kind, area, isoDate, sourceFolder, sourceFile) {
+  return [kind, area, isoDate, sourceFolder || sourceFile.localRelativePath].join("::");
+}
+
+function hasExistingFolderEvent(fileContents, sourceFolder, isoDate) {
+  if (!sourceFolder) {
+    return false;
+  }
+
+  return (
+    hasExistingMarker(fileContents, `sourceFolder: ${JSON.stringify(sourceFolder)}`) &&
+    hasExistingMarker(fileContents, `sourceDate: ${JSON.stringify(isoDate)}`)
+  );
 }
 
 function resolvePlacement(value, fallback) {
@@ -997,6 +1132,15 @@ function recordItemSummary(store, summary) {
   }
 
   store.set(summary.filename, existing);
+}
+
+function shortenToWordLimit(text, maxWords) {
+  const words = (text || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) {
+    return text;
+  }
+
+  return words.slice(0, maxWords).join(" ");
 }
 
 function formatObjectLiteral(objectValue, indent) {

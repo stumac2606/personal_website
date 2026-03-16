@@ -5,7 +5,7 @@ export type MediaSectionName =
   | "Tech"
   | "Flight"
   | "Snowboard"
-  | "Life events";
+  | "Life in Motion";
 
 export type MediaType = "image" | "video";
 export type MediaMode = "fit" | "cover";
@@ -74,9 +74,9 @@ export const mediaSections: MediaSection[] = [
   },
   {
     id: "life-events",
-    name: "Life events",
-    label: "Life events",
-    caption: "Endurance milestones beyond the court.",
+    name: "Life in Motion",
+    label: "Life in Motion",
+    caption: "Travel, endurance, and life beyond the court.",
   },
 ];
 
@@ -146,37 +146,38 @@ export const media: MediaItem[] = [
     type: "image",
     src: "/media/images/Iron_run.JPG",
     title: "Iron run",
-    section: "Life events",
+    section: "Life in Motion",
   },
   {
     id: "life-iron-cycle",
     type: "image",
     src: "/media/images/Iron_cycle.JPG",
     title: "Iron cycle",
-    section: "Life events",
+    section: "Life in Motion",
   },
   {
     id: "life-iron-finish",
     type: "image",
     src: "/media/images/Iron_finish.JPG",
     title: "Iron finish",
-    section: "Life events",
+    section: "Life in Motion",
   },
   {
     id: "life-iron-swim",
     type: "image",
     src: "/media/images/Iron_swim.JPG",
     title: "Iron swim",
-    section: "Life events",
+    section: "Life in Motion",
   },
   {
     id: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16",
     type: "image",
     src: "/media/images/4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16.jpg",
-    title: "Motion Dynamics Pitch at VentureFest 2026",
-    alt: "Stuart MacGregor presenting Motion Dynamics' 'Helping the world move better' pitch at VentureFest 2026.",
+    title: "VentureFest pitch",
+    alt: "Stuart pitching Motion Dynamics on stage at VentureFest 2026.",
     section: "Tech",
-    caption: "Presented Motion Dynamics' core value proposition at VentureFest 2026. The objective was to articulate our systems-based approach to performance enhancement and product development.",
+    caption:
+      "Pitched how we turn movement footage into clearer coaching decisions.",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
     sourceMimeType: "image/jpeg",
@@ -185,10 +186,10 @@ export const media: MediaItem[] = [
     id: "6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16",
     type: "image",
     src: "/media/images/6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16.jpg",
-    title: "Motion Dynamics Team at VentureFest 2026",
-    alt: "The Motion Dynamics team posing for a photo at VentureFest 2026.",
+    title: "VentureFest team photo",
+    alt: "Motion Dynamics team after the VentureFest 2026 pitch.",
     section: "Tech",
-    caption: "Post-presentation at VentureFest 2026. Engaging with the startup ecosystem and showcasing our engineering-driven solutions.",
+    caption: "A quick team moment after the pitch and demo.",
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
     sourceMimeType: "image/jpeg",
@@ -215,7 +216,7 @@ export const mediaFilters: Array<{
   {
     id: "all",
     label: "All",
-    sections: ["Squash", "Tech", "Flight", "Snowboard", "Life events"],
+    sections: ["Squash", "Tech", "Flight", "Snowboard", "Life in Motion"],
   },
   {
     id: "tech",

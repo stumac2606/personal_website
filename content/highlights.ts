@@ -20,6 +20,7 @@ export type Highlight = {
   featured?: boolean;
   sourceFilename?: string;
   sourceDate?: string;
+  sourceFolder?: string;
 };
 
 export const highlights: Highlight[] = [
@@ -98,26 +99,17 @@ export const highlights: Highlight[] = [
     featured: true,
   },
   {
-    id: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759-2026-03-16",
+    id: "venturefest-2026",
     area: "Motion Dynamics",
-    title: "Motion Dynamics Pitch at VentureFest 2026",
-    meta: "2026-03-16",
-    description: "Presented Motion Dynamics' core value proposition at VentureFest 2026. The objective was to articulate our systems-based approach to performance enhancement and product development.",
+    title: "Motion Dynamics at VentureFest 2026",
+    meta: "PitchUp competition - Mar 2026",
+    description:
+      "Pitched how we turn movement footage into clearer coaching decisions.",
     date: "2026-03-16",
-    tag: "project",
+    tag: "moment",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
-  },
-  {
-    id: "6cd19684-2df2-4516-9ef5-0fb096a5b283-2026-03-16",
-    area: "Motion Dynamics",
-    title: "Motion Dynamics Team at VentureFest 2026",
-    meta: "2026-03-16",
-    description: "Post-presentation at VentureFest 2026. Engaging with the startup ecosystem and showcasing our engineering-driven solutions.",
-    date: "2026-03-16",
-    tag: "project",
-    sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
-    sourceDate: "2026-03-16",
+    sourceFolder: "PitchUp competition - VentureFest 2026",
   },
   {
     id: "snowboard-jump-2026-03-16",
