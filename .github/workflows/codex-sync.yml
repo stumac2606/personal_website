@@ -165,6 +165,7 @@ jobs:
           fi
 
           chmod 600 "$CRED_FILE"
+          echo "gws_credentials_file=${CRED_FILE}" >> "$GITHUB_OUTPUT"
           echo "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=${CRED_FILE}" >> "$GITHUB_ENV"
           echo "GOOGLE_APPLICATION_CREDENTIALS=${CRED_FILE}" >> "$GITHUB_ENV"
           echo "has_creds=true" >> "$GITHUB_OUTPUT"
@@ -180,6 +181,25 @@ jobs:
           fi
 
           gws --version
+
+      - name: Validate Google Workspace auth
+        if: steps.gws-creds-check.outputs.has_creds == 'true'
+        run: |
+          set -euo pipefail
+          AUTH_LOG="${RUNNER_TEMP}/gws-auth.log"
+
+          if gws auth status > "$AUTH_LOG" 2>&1; then
+            echo "auth=true" >> "$GITHUB_OUTPUT"
+            echo "gws auth check passed."
+          else
+            echo "auth=false" >> "$GITHUB_OUTPUT"
+            echo "::error::gws could not authenticate with GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE."
+            echo "auth_error<<EOF" >> "$GITHUB_OUTPUT"
+            sed -n '1,40p' "$AUTH_LOG" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            cat "$AUTH_LOG"
+            exit 1
+          fi
 
       - name: Run Gemini Agent
         if: steps.gws-creds-check.outputs.has_creds == 'true'
@@ -205,6 +225,8 @@ jobs:
                  -d chat_id="$TELEGRAM_CHAT_ID" \
                  -d text="Sync Complete: Updated site with new analyzed media."
         env:
+          GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
