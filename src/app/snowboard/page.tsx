@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Section from "@/components/Section";
 import { withBasePath } from "@/lib/assetPath";
 import {
@@ -79,6 +80,8 @@ export default function SnowboardPage() {
           ))}
         </div>
       </Section>
+
+      <DynamicPageSections page="snowboard" eyebrow={snowboardPage.eyebrow} />
     </>
   );
 }

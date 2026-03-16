@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Section from "@/components/Section";
 import {
   contactMeta,
@@ -59,6 +60,8 @@ export default function ContactPage() {
           </div>
         </div>
       </Section>
+
+      <DynamicPageSections page="contact" eyebrow={contactPage.eyebrow} />
     </>
   );
 }

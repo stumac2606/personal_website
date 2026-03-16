@@ -1,4 +1,5 @@
 import { bestRank, bestRankDates } from "./squashRanking";
+import type { DynamicPageKey } from "./pageSections";
 
 export type TimelineArea =
   | "Squash"
@@ -13,6 +14,10 @@ export type TimelineItem = {
   title: string;
   meta?: string;
   description?: string;
+  pageKey?: DynamicPageKey;
+  pageSectionKey?: string;
+  pageSectionTitle?: string;
+  pageSectionIntro?: string;
   sourceFilename?: string;
   sourceDate?: string;
   sourceFolder?: string;

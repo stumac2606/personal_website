@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Image from "next/image";
 import Section from "@/components/Section";
 import MediaGallery from "@/components/MediaGallery";
@@ -159,6 +160,8 @@ export default function SportPage() {
       ) : (
         <div />
       )}
+
+      <DynamicPageSections page="sport" eyebrow={sportPage.eyebrow} />
     </>
   );
 }

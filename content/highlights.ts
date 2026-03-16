@@ -1,4 +1,5 @@
 import { profile } from "./profile";
+import type { DynamicPageKey } from "./pageSections";
 
 export type HighlightArea =
   | "Squash"
@@ -18,7 +19,11 @@ export type Highlight = {
   date?: string;
   tag?: HighlightTag;
   featured?: boolean;
-  workSection?: string;
+  sourcePlacement?: "primary" | "home-feature";
+  pageKey?: DynamicPageKey;
+  pageSectionKey?: string;
+  pageSectionTitle?: string;
+  pageSectionIntro?: string;
   sourceFilename?: string;
   sourceDate?: string;
   sourceFolder?: string;
@@ -66,7 +71,10 @@ export const highlights: Highlight[] = [
     description: "Built a serve pipeline from video, movement extraction, and object tracking.",
     tag: "project",
     featured: true,
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
   },
   {
     id: "investment-forum",
@@ -75,7 +83,10 @@ export const highlights: Highlight[] = [
     description:
       "It's strange getting into my squash kit for a completely different purpose now; pitching our sport tech company... Great highlight performing a bang average tennis serve on stage.",
     tag: "moment",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
   },
   {
     id: "casi-level-1",
@@ -109,7 +120,10 @@ export const highlights: Highlight[] = [
       "Pitched how we turn movement footage into clearer coaching decisions.",
     date: "2026-03-16",
     tag: "moment",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
     sourceFolder: "PitchUp competition - VentureFest 2026",

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Section from "@/components/Section";
-import MediaGallery from "@/components/MediaGallery";
 import { withBasePath } from "@/lib/assetPath";
-import { highlights } from "../../../content/highlights";
-import { media, mediaPage, mediaSections } from "../../../content/media";
-import { workMeta, workPage, workSections } from "../../../content/projects";
+import { workMeta, workPage } from "../../../content/projects";
 
 export const metadata: Metadata = {
   title: workMeta.title,
@@ -17,43 +15,7 @@ export const metadata: Metadata = {
   },
 };
 
-const resolveHighlightWorkSection = (item: (typeof highlights)[number]) => {
-  return item.workSection ?? (item.area === "Motion Dynamics" ? "motion-dynamics" : null);
-};
-
-const resolveMediaWorkSection = (item: (typeof media)[number]) => {
-  return item.workSection ?? (item.section === "Tech" ? "motion-dynamics" : null);
-};
-
 export default function WorkPage() {
-  const renderedSections = workSections
-    .map((section) => {
-      const sectionHighlights = highlights.filter(
-        (item) => resolveHighlightWorkSection(item) === section.key,
-      );
-      const sectionMedia = media.filter(
-        (item) => resolveMediaWorkSection(item) === section.key,
-      );
-      const sectionMediaNames = [...new Set(sectionMedia.map((item) => item.section))];
-      const sectionMediaSections = mediaSections.filter((item) =>
-        sectionMediaNames.includes(item.name),
-      );
-
-      return {
-        ...section,
-        highlights: sectionHighlights,
-        media: sectionMedia,
-        mediaSections: sectionMediaSections,
-        mediaFilters: sectionMediaNames.map((name) => ({
-          id: `${section.key}-${name.toLowerCase().replace(/\s+/g, "-")}`,
-          label: name,
-          sections: [name],
-        })),
-      };
-    })
-    .filter((section) => section.highlights.length > 0 || section.media.length > 0)
-    .sort((left, right) => left.order - right.order);
-
   return (
     <>
       <Section
@@ -84,46 +46,7 @@ export default function WorkPage() {
         <p className="text-lg text-muted">{workPage.intro}</p>
       </Section>
 
-      {renderedSections.map((section) => (
-        <Section
-          key={section.key}
-          id={`${workPage.id}-${section.key}`}
-          eyebrow={workPage.eyebrow}
-          title={section.title}
-          subtitle={section.intro ?? workPage.highlightsSubtitle}
-        >
-          <div className="grid gap-10">
-            {section.highlights.length > 0 ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                {section.highlights.map((highlight) => (
-                  <article
-                    key={highlight.id}
-                    className="border-l-2 border-accent pl-4"
-                  >
-                    <h3 className="text-xl">{highlight.title}</h3>
-                    {highlight.description ? (
-                      <p className="text-sm text-muted">{highlight.description}</p>
-                    ) : null}
-                    {highlight.meta ? (
-                      <p className="text-sm text-muted">{highlight.meta}</p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            ) : null}
-
-            {section.media.length > 0 ? (
-              <MediaGallery
-                items={section.media}
-                sections={section.mediaSections}
-                filters={section.mediaFilters}
-                filterLabel={mediaPage.filterLabel}
-                videoFallback={mediaPage.videoFallback}
-              />
-            ) : null}
-          </div>
-        </Section>
-      ))}
+      <DynamicPageSections page="work" eyebrow={workPage.eyebrow} />
 
       <Section
         id={`${workPage.id}-quote`}

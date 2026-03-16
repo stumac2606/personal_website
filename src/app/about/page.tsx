@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Section from "@/components/Section";
 import { aboutMeta, aboutPage } from "../../../content/profile";
 import { timeline, timelineSection } from "../../../content/timeline";
@@ -31,6 +32,8 @@ export default function AboutPage() {
           ))}
         </div>
       </Section>
+
+      <DynamicPageSections page="about" eyebrow={aboutPage.eyebrow} />
 
       <Section
         id={timelineSection.id}

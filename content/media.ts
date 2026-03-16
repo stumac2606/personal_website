@@ -1,4 +1,5 @@
 import { profile } from "./profile";
+import type { DynamicPageKey } from "./pageSections";
 
 export type MediaSectionName =
   | "Squash"
@@ -17,7 +18,10 @@ export type MediaItem = {
   title: string;
   alt?: string;
   section: MediaSectionName;
-  workSection?: string;
+  pageKey?: DynamicPageKey;
+  pageSectionKey?: string;
+  pageSectionTitle?: string;
+  pageSectionIntro?: string;
   caption?: string;
   mode?: MediaMode;
   sourceFilename?: string;
@@ -102,7 +106,10 @@ export const media: MediaItem[] = [
     src: "/media/images/tennis_serve_on_stage_for_pitch.JPG",
     title: "Serve demo on stage",
     section: "Tech",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
   },
   {
     id: "tech-pitching",
@@ -110,7 +117,10 @@ export const media: MediaItem[] = [
     src: "/media/images/serious_image_of_me_pitching.JPG",
     title: "Pitching Motion Dynamics",
     section: "Tech",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
   },
   {
     id: "tech-serve-analysis",
@@ -119,7 +129,10 @@ export const media: MediaItem[] = [
     title: "Tennis serve analysis",
     caption: "Video -> movement extraction -> biomechanics insights.",
     section: "Tech",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
   },
   {
     id: "flight-paragliding",
@@ -180,7 +193,10 @@ export const media: MediaItem[] = [
     title: "VentureFest pitch",
     alt: "Stuart pitching Motion Dynamics on stage at VentureFest 2026.",
     section: "Tech",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
     caption: "Pitched how we turn movement footage into clearer coaching decisions.",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
@@ -193,7 +209,10 @@ export const media: MediaItem[] = [
     title: "VentureFest team photo",
     alt: "Motion Dynamics team after the VentureFest 2026 pitch.",
     section: "Tech",
-    workSection: "motion-dynamics",
+    pageKey: "work",
+    pageSectionKey: "motion-dynamics",
+    pageSectionTitle: "Motion Dynamics",
+    pageSectionIntro: "Product demos, technical milestones, and commercial proof points.",
     caption: "A quick team photo after the pitch.",
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
@@ -269,33 +288,28 @@ export const mediaFilters: Array<{
   id: MediaFilterId;
   label: string;
   sections: MediaSectionName[];
-}> = [
-  {
-    id: "all",
-    label: "All",
-    sections: ["Squash", "Tech", "Flight", "Snowboard", "Life in Motion"],
-  },
-  {
-    id: "tech",
-    label: "Tech",
-    sections: ["Tech"],
-  },
-  {
-    id: "snow",
-    label: "Snow",
-    sections: ["Snowboard"],
-  },
-  {
-    id: "flight",
-    label: "Flight",
-    sections: ["Flight"],
-  },
-  {
-    id: "squash",
-    label: "Squash",
-    sections: ["Squash"],
-  },
-];
+}> = buildMediaFilters(mediaSections);
+
+export function buildMediaFilters(
+  sections: MediaSection[],
+): Array<{
+  id: MediaFilterId;
+  label: string;
+  sections: MediaSectionName[];
+}> {
+  return [
+    {
+      id: "all",
+      label: "All",
+      sections: sections.map((section) => section.name),
+    },
+    ...sections.map((section) => ({
+      id: section.id,
+      label: section.label,
+      sections: [section.name],
+    })),
+  ];
+}
 
 export const snowboardClips = media.filter(
   (item) => item.section === "Snowboard" && item.type === "video",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import DynamicPageSections from "@/components/DynamicPageSections";
 import Section from "@/components/Section";
 import StatChip from "@/components/StatChip";
 import { withBasePath } from "@/lib/assetPath";
@@ -154,6 +155,8 @@ export default function Home() {
           ))}
         </div>
       </Section>
+
+      <DynamicPageSections page="home" eyebrow={homeHero.eyebrow} />
 
       <Section
         id={homeCta.id}

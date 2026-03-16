@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Section from "@/components/Section";
 import MediaGallery from "@/components/MediaGallery";
 import {
+  buildMediaFilters,
   media,
-  mediaFilters,
   mediaMeta,
   mediaPage,
   mediaSections,
@@ -42,7 +42,7 @@ export default function MediaPage() {
         <MediaGallery
           items={media}
           videoFallback={mediaPage.videoFallback}
-          filters={mediaFilters}
+          filters={buildMediaFilters(mediaSections)}
           sections={mediaSections}
           filterLabel={mediaPage.filterLabel}
         />

@@ -10,7 +10,7 @@ const RESULTS_PATH = path.join(TEMP_MEDIA_DIR, "process-results.json");
 const MEDIA_TS_PATH = path.join(ROOT_DIR, "content", "media.ts");
 const TIMELINE_TS_PATH = path.join(ROOT_DIR, "content", "timeline.ts");
 const HIGHLIGHTS_TS_PATH = path.join(ROOT_DIR, "content", "highlights.ts");
-const PROJECTS_TS_PATH = path.join(ROOT_DIR, "content", "projects.ts");
+const PAGE_SECTIONS_TS_PATH = path.join(ROOT_DIR, "content", "pageSections.ts");
 const PUBLIC_MEDIA_DIR = path.join(ROOT_DIR, "public", "media");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
@@ -48,11 +48,21 @@ const HIGHLIGHT_TAG_VALUES = [
   "moment",
   "none",
 ];
+const FEATURE_FLAG_VALUES = ["yes", "no"];
+const PAGE_KEY_VALUES = [
+  "home",
+  "work",
+  "sport",
+  "snowboard",
+  "about",
+  "contact",
+  "none",
+];
 const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
 const BRAND_GUIDE =
   "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, also return work_section_key, work_section_title, and optional work_section_intro.\n- Use "motion-dynamics" for general company items that do not need a more specific Work subsection.\n- Use a more specific work_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream inside Work.\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- For non-work items, return "none" for the work section fields.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "work_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "work_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "work_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on a specific page section, also return page_key, page_section_key, page_section_title, and optional page_section_intro.\n- Use page_key="work" and page_section_key="motion-dynamics" for general company items that do not need a more specific subsection.\n- Use a more specific page_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream.\n- Return page_key="home" when the content should become a homepage section, page_key="sport" for the sport page, page_key="snowboard" for the snowboard page, page_key="about" for the about page, and page_key="contact" only when the content is genuinely about contact, bookings, or availability.\n- Only set feature_on_homepage="yes" when the sidecar note explicitly asks for homepage highlight placement or the source context clearly says it should also be featured on the homepage. Default to "no".\n- When feature_on_homepage="yes", provide homepage_feature_title and homepage_feature_text as a tighter homepage summary than the main page version.\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.\n- When feature_on_homepage="no", return "none" for homepage_feature_title and homepage_feature_text.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "feature_on_homepage": "yes" | "no",\n      "homepage_feature_title": "Short homepage title" | "none",\n      "homepage_feature_text": "Short homepage summary" | "none",\n      "page_key": "home" | "work" | "sport" | "snowboard" | "about" | "contact" | "none",\n      "page_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "page_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "page_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -82,9 +92,19 @@ const RESPONSE_SCHEMA = {
             type: "string",
             enum: HIGHLIGHT_TAG_VALUES,
           },
-          work_section_key: { type: "string" },
-          work_section_title: { type: "string" },
-          work_section_intro: { type: "string" },
+          feature_on_homepage: {
+            type: "string",
+            enum: FEATURE_FLAG_VALUES,
+          },
+          homepage_feature_title: { type: "string" },
+          homepage_feature_text: { type: "string" },
+          page_key: {
+            type: "string",
+            enum: PAGE_KEY_VALUES,
+          },
+          page_section_key: { type: "string" },
+          page_section_title: { type: "string" },
+          page_section_intro: { type: "string" },
         },
         required: [
           "filename",
@@ -96,9 +116,13 @@ const RESPONSE_SCHEMA = {
           "timeline_area",
           "highlight_area",
           "highlight_tag",
-          "work_section_key",
-          "work_section_title",
-          "work_section_intro",
+          "feature_on_homepage",
+          "homepage_feature_title",
+          "homepage_feature_text",
+          "page_key",
+          "page_section_key",
+          "page_section_title",
+          "page_section_intro",
         ],
       },
     },
@@ -186,12 +210,12 @@ async function main() {
   const mediaState = fs.readFileSync(MEDIA_TS_PATH, "utf8");
   const timelineState = fs.readFileSync(TIMELINE_TS_PATH, "utf8");
   const highlightsState = fs.readFileSync(HIGHLIGHTS_TS_PATH, "utf8");
-  const projectsState = fs.readFileSync(PROJECTS_TS_PATH, "utf8");
+  const pageSectionsState = fs.readFileSync(PAGE_SECTIONS_TS_PATH, "utf8");
   const fileStates = new Map([
     [MEDIA_TS_PATH, mediaState],
     [TIMELINE_TS_PATH, timelineState],
     [HIGHLIGHTS_TS_PATH, highlightsState],
-    [PROJECTS_TS_PATH, projectsState],
+    [PAGE_SECTIONS_TS_PATH, pageSectionsState],
   ]);
   const touchedFiles = new Set();
   const appended = [];
@@ -200,6 +224,7 @@ async function main() {
   const itemSummaries = new Map();
   const createdTimelineEvents = new Set();
   const createdHighlightEvents = new Set();
+  const createdHomepageFeatureEvents = new Set();
   const manifestByFilename = new Map(
     processableFiles.map((file) => [file.filename, file]),
   );
@@ -238,46 +263,66 @@ async function main() {
       sourceFile,
       highlightArea,
     );
-    const workSectionKey = resolveWorkSectionKey(
-      update.work_section_key,
+    const pageKey = resolvePageKey(
+      update.page_key,
+      sourceFile,
+      gallerySection,
+      timelineArea,
+      highlightArea,
+    );
+    const pageSectionKey = resolvePageSectionKey(
+      update.page_section_key,
+      pageKey,
       sourceFile,
       gallerySection,
       highlightArea,
     );
-    const workSectionTitle = resolveWorkSectionTitle(
-      update.work_section_title,
-      workSectionKey,
+    const pageSectionTitle = resolvePageSectionTitle(
+      update.page_section_title,
+      pageSectionKey,
       title,
     );
-    const workSectionIntro = resolveWorkSectionIntro(
-      update.work_section_intro,
-      workSectionKey,
-      workSectionTitle,
+    const pageSectionIntro = resolvePageSectionIntro(
+      update.page_section_intro,
+      pageSectionKey,
+      pageSectionTitle,
       brandContext,
+    );
+    const featureOnHomepage = update.feature_on_homepage === "yes";
+    const homepageFeatureTitle = sanitizeHomepageFeatureTitle(
+      update.homepage_feature_title,
+      title,
+    );
+    const homepageFeatureText = normalizeHomepageFeatureText(
+      update.homepage_feature_text,
+      contentText,
+      brandContext,
+      homepageFeatureTitle,
     );
 
     if (!sourceFile) {
       throw new Error(`Gemini returned unknown filename: ${update.filename}`);
     }
 
-    if (workSectionKey !== "none") {
-      const currentProjects = fileStates.get(PROJECTS_TS_PATH);
-      if (!hasWorkSection(currentProjects, workSectionKey)) {
-        const nextProjects = insertIntoExportedArray(
-          currentProjects,
-          "workSections",
+    if (pageKey !== "none" && pageSectionKey !== "none") {
+      const currentPageSections = fileStates.get(PAGE_SECTIONS_TS_PATH);
+      if (!hasPageSection(currentPageSections, pageKey, pageSectionKey)) {
+        const nextPageSections = insertIntoExportedArray(
+          currentPageSections,
+          "dynamicPageSections",
           {
-            key: workSectionKey,
-            title: workSectionTitle,
-            intro: workSectionIntro,
+            page: pageKey,
+            key: pageSectionKey,
+            title: pageSectionTitle,
+            intro: pageSectionIntro,
             order: 50,
           },
         );
 
-        fileStates.set(PROJECTS_TS_PATH, nextProjects);
-        touchedFiles.add(PROJECTS_TS_PATH);
+        fileStates.set(PAGE_SECTIONS_TS_PATH, nextPageSections);
+        touchedFiles.add(PAGE_SECTIONS_TS_PATH);
         console.log(
-          `Successfully appended ${workSectionKey} to content/projects.ts`,
+          `Successfully appended ${pageSectionKey} to content/pageSections.ts`,
         );
       }
     }
@@ -310,7 +355,12 @@ async function main() {
             title,
             alt: altText,
             section: gallerySection,
-            workSection: workSectionKey !== "none" ? workSectionKey : undefined,
+            pageKey: pageKey !== "none" ? pageKey : undefined,
+            pageSectionKey: pageSectionKey !== "none" ? pageSectionKey : undefined,
+            pageSectionTitle:
+              pageSectionKey !== "none" ? pageSectionTitle : undefined,
+            pageSectionIntro:
+              pageSectionKey !== "none" ? pageSectionIntro : undefined,
             caption: contentText,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
@@ -325,16 +375,16 @@ async function main() {
           filename: sourceFile.filename,
           title,
           targetFile: path.relative(ROOT_DIR, MEDIA_TS_PATH),
-          pages: getMediaPages(gallerySection, mediaAsset.type, workSectionKey),
+          pages: getMediaPages(gallerySection, mediaAsset.type, pageKey),
         });
         recordItemSummary(itemSummaries, {
           filename: sourceFile.filename,
           title,
-          pages: getMediaPages(gallerySection, mediaAsset.type, workSectionKey),
+          pages: getMediaPages(gallerySection, mediaAsset.type, pageKey),
           placements: [
             `Media gallery (${gallerySection})`,
-            ...(workSectionKey !== "none"
-              ? [`Work section (${workSectionTitle})`]
+            ...(pageSectionKey !== "none"
+              ? [`${pageKey} section (${pageSectionTitle})`]
               : []),
           ],
         });
@@ -374,6 +424,12 @@ async function main() {
             title,
             meta: update.date,
             description: contentText,
+            pageKey: pageKey !== "none" ? pageKey : undefined,
+            pageSectionKey: pageSectionKey !== "none" ? pageSectionKey : undefined,
+            pageSectionTitle:
+              pageSectionKey !== "none" ? pageSectionTitle : undefined,
+            pageSectionIntro:
+              pageSectionKey !== "none" ? pageSectionIntro : undefined,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
             sourceFolder,
@@ -388,13 +444,18 @@ async function main() {
           filename: sourceFile.filename,
           title,
           targetFile: path.relative(ROOT_DIR, TIMELINE_TS_PATH),
-          pages: ["/about"],
+          pages: getTimelinePages(pageKey),
         });
         recordItemSummary(itemSummaries, {
           filename: sourceFile.filename,
           title,
-          pages: ["/about"],
-          placements: [`Timeline (${timelineArea})`],
+          pages: getTimelinePages(pageKey),
+          placements: [
+            `Timeline (${timelineArea})`,
+            ...(pageSectionKey !== "none"
+              ? [`${pageKey} section (${pageSectionTitle})`]
+              : []),
+          ],
         });
         console.log(
           `Successfully appended ${sourceFile.filename} to content/timeline.ts`,
@@ -433,7 +494,13 @@ async function main() {
             description: contentText,
             date: update.date,
             tag: highlightTag,
-            workSection: workSectionKey !== "none" ? workSectionKey : undefined,
+            sourcePlacement: "primary",
+            pageKey: pageKey !== "none" ? pageKey : undefined,
+            pageSectionKey: pageSectionKey !== "none" ? pageSectionKey : undefined,
+            pageSectionTitle:
+              pageSectionKey !== "none" ? pageSectionTitle : undefined,
+            pageSectionIntro:
+              pageSectionKey !== "none" ? pageSectionIntro : undefined,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
             sourceFolder,
@@ -448,25 +515,88 @@ async function main() {
           filename: sourceFile.filename,
           title,
           targetFile: path.relative(ROOT_DIR, HIGHLIGHTS_TS_PATH),
-          pages: getHighlightPages(highlightArea, highlightTag, workSectionKey),
+          pages: getHighlightPages(highlightArea, highlightTag, pageKey),
         });
         recordItemSummary(itemSummaries, {
           filename: sourceFile.filename,
           title,
-          pages: getHighlightPages(
-            highlightArea,
-            highlightTag,
-            workSectionKey,
-          ),
+          pages: getHighlightPages(highlightArea, highlightTag, pageKey),
           placements: [
             `Highlights (${highlightArea})`,
-            ...(workSectionKey !== "none"
-              ? [`Work section (${workSectionTitle})`]
+            ...(pageSectionKey !== "none"
+              ? [`${pageKey} section (${pageSectionTitle})`]
               : []),
           ],
         });
         console.log(
           `Successfully appended ${sourceFile.filename} to content/highlights.ts`,
+        );
+      }
+    }
+
+    if (highlightArea !== "none" && featureOnHomepage) {
+      const currentHighlights = fileStates.get(HIGHLIGHTS_TS_PATH);
+      const homepageFeatureKey = buildPlacementEventKey(
+        "highlights-home-feature",
+        highlightArea,
+        update.date,
+        sourceFolder,
+        sourceFile,
+      );
+
+      if (
+        hasExistingHighlightPlacement(
+          currentHighlights,
+          "home-feature",
+          sourceFile.filename,
+          update.date,
+          sourceFolder,
+        ) ||
+        createdHomepageFeatureEvents.has(homepageFeatureKey)
+      ) {
+        skipped.push({
+          destination: "homepage-highlight",
+          filename: sourceFile.filename,
+          reason: "Duplicate homepage highlight detected for this event.",
+        });
+      } else {
+        const nextHighlights = insertIntoExportedArray(
+          currentHighlights,
+          "highlights",
+          {
+            id: `${stableId}-home`,
+            area: highlightArea,
+            title: homepageFeatureTitle,
+            meta: update.date,
+            description: homepageFeatureText,
+            date: update.date,
+            tag: highlightTag,
+            featured: true,
+            sourcePlacement: "home-feature",
+            sourceFilename: sourceFile.filename,
+            sourceDate: update.date,
+            sourceFolder,
+          },
+        );
+
+        fileStates.set(HIGHLIGHTS_TS_PATH, nextHighlights);
+        touchedFiles.add(HIGHLIGHTS_TS_PATH);
+        createdHomepageFeatureEvents.add(homepageFeatureKey);
+        appended.push({
+          destination: "homepage-highlight",
+          filename: sourceFile.filename,
+          title: homepageFeatureTitle,
+          targetFile: path.relative(ROOT_DIR, HIGHLIGHTS_TS_PATH),
+          pages: ["/"],
+        });
+        recordItemSummary(itemSummaries, {
+          filename: sourceFile.filename,
+          title,
+          pages: ["/"],
+          placements: ["Homepage highlight"],
+        });
+        console.log(
+          `Successfully appended homepage feature for ${sourceFile.filename} to content/highlights.ts`,
         );
       }
     }
@@ -792,9 +922,13 @@ function validateGeminiResponse(payload, batchFiles) {
       "timeline_area",
       "highlight_area",
       "highlight_tag",
-      "work_section_key",
-      "work_section_title",
-      "work_section_intro",
+      "feature_on_homepage",
+      "homepage_feature_title",
+      "homepage_feature_text",
+      "page_key",
+      "page_section_key",
+      "page_section_title",
+      "page_section_intro",
     ]) {
       if (typeof update[field] !== "string") {
         throw new Error(`Field ${field} must be a string.`);
@@ -827,6 +961,14 @@ function validateGeminiResponse(payload, batchFiles) {
 
     if (!HIGHLIGHT_TAG_VALUES.includes(update.highlight_tag)) {
       throw new Error(`Invalid highlight_tag for ${update.filename}.`);
+    }
+
+    if (!FEATURE_FLAG_VALUES.includes(update.feature_on_homepage)) {
+      throw new Error(`Invalid feature_on_homepage for ${update.filename}.`);
+    }
+
+    if (!PAGE_KEY_VALUES.includes(update.page_key)) {
+      throw new Error(`Invalid page_key for ${update.filename}.`);
     }
 
     seenFilenames.add(update.filename);
@@ -888,10 +1030,13 @@ function hasExistingMarker(fileContents, marker) {
   return fileContents.includes(marker);
 }
 
-function hasWorkSection(fileContents, workSectionKey) {
+function hasPageSection(fileContents, pageKey, pageSectionKey) {
   return hasExistingMarker(
     fileContents,
-    `key: ${JSON.stringify(workSectionKey)}`,
+    `page: ${JSON.stringify(pageKey)}`,
+  ) && hasExistingMarker(
+    fileContents,
+    `key: ${JSON.stringify(pageSectionKey)}`,
   );
 }
 
@@ -900,6 +1045,33 @@ function hasSourceDateMarker(fileContents, filename, isoDate) {
     hasExistingMarker(fileContents, `sourceFilename: ${JSON.stringify(filename)}`) &&
     hasExistingMarker(fileContents, `sourceDate: ${JSON.stringify(isoDate)}`)
   );
+}
+
+function hasExistingHighlightPlacement(
+  fileContents,
+  sourcePlacement,
+  filename,
+  isoDate,
+  sourceFolder,
+) {
+  const hasPlacement = hasExistingMarker(
+    fileContents,
+    `sourcePlacement: ${JSON.stringify(sourcePlacement)}`,
+  );
+
+  if (!hasPlacement) {
+    return false;
+  }
+
+  if (filename && hasSourceDateMarker(fileContents, filename, isoDate)) {
+    return true;
+  }
+
+  if (sourceFolder && hasExistingFolderEvent(fileContents, sourceFolder, isoDate)) {
+    return true;
+  }
+
+  return false;
 }
 
 function insertIntoExportedArray(fileContents, exportName, objectValue) {
@@ -1108,6 +1280,27 @@ function normalizeAltText(text, title, brandContext) {
   return cleaned;
 }
 
+function sanitizeHomepageFeatureTitle(value, fallbackTitle) {
+  const normalized = (value || "").replace(/\s+/g, " ").trim();
+  if (!normalized || normalized.toLowerCase() === "none") {
+    return fallbackTitle;
+  }
+
+  return sanitizeGeneratedTitle(normalized, fallbackTitle, "");
+}
+
+function normalizeHomepageFeatureText(value, fallbackText, brandContext, title) {
+  const normalized = (value || "").replace(/\s+/g, " ").trim();
+  if (!normalized || normalized.toLowerCase() === "none") {
+    return shortenToWordLimit(fallbackText, 14);
+  }
+
+  return shortenToWordLimit(
+    normalizeGeneratedCopy(normalized, brandContext, title),
+    14,
+  );
+}
+
 function inferContextFromPath(file) {
   const haystack = `${file.localRelativePath || ""} ${file.filename || ""}`.toLowerCase();
 
@@ -1189,20 +1382,40 @@ function resolveHighlightTag(value, sourceFile, highlightArea) {
   return isTextLike(sourceFile) ? "project" : "moment";
 }
 
-function resolveWorkSectionKey(value, sourceFile, gallerySection, highlightArea) {
+function resolvePageKey(value, sourceFile, gallerySection, timelineArea, highlightArea) {
   if (value && value !== "none") {
-    return slugifyWorkSectionKey(value);
+    return value;
   }
 
   if (highlightArea === "Motion Dynamics" || gallerySection === "Tech") {
+    return "work";
+  }
+
+  if (timelineArea === "Squash" || gallerySection === "Squash") {
+    return "sport";
+  }
+
+  if (highlightArea === "Snowboarding" || gallerySection === "Snowboard") {
+    return "snowboard";
+  }
+
+  return "none";
+}
+
+function resolvePageSectionKey(value, pageKey, sourceFile, gallerySection, highlightArea) {
+  if (value && value !== "none") {
+    return slugifyPageSectionKey(value);
+  }
+
+  if (pageKey === "work") {
     return "motion-dynamics";
   }
 
   return "none";
 }
 
-function resolveWorkSectionTitle(value, workSectionKey, fallbackTitle) {
-  if (workSectionKey === "none") {
+function resolvePageSectionTitle(value, pageSectionKey, fallbackTitle) {
+  if (pageSectionKey === "none") {
     return "none";
   }
 
@@ -1211,15 +1424,15 @@ function resolveWorkSectionTitle(value, workSectionKey, fallbackTitle) {
     return normalized;
   }
 
-  if (workSectionKey === "motion-dynamics") {
+  if (pageSectionKey === "motion-dynamics") {
     return "Motion Dynamics";
   }
 
-  return humanizeFilename(workSectionKey);
+  return humanizeFilename(pageSectionKey);
 }
 
-function resolveWorkSectionIntro(value, workSectionKey, workSectionTitle, brandContext) {
-  if (workSectionKey === "none") {
+function resolvePageSectionIntro(value, pageSectionKey, pageSectionTitle, brandContext) {
+  if (pageSectionKey === "none") {
     return "none";
   }
 
@@ -1228,16 +1441,16 @@ function resolveWorkSectionIntro(value, workSectionKey, workSectionTitle, brandC
     return shortenToWordLimit(normalized, 16);
   }
 
-  if (workSectionKey === "motion-dynamics") {
+  if (pageSectionKey === "motion-dynamics") {
     return "Product demos, technical milestones, and commercial proof points.";
   }
 
   return brandContext === "company"
-    ? `${workSectionTitle} work, demos, and coaching-facing analysis.`
-    : `${workSectionTitle} updates and supporting media.`;
+    ? `${pageSectionTitle} work, demos, and coaching-facing analysis.`
+    : `${pageSectionTitle} updates and supporting media.`;
 }
 
-function slugifyWorkSectionKey(value) {
+function slugifyPageSectionKey(value) {
   const slug = String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -1246,10 +1459,12 @@ function slugifyWorkSectionKey(value) {
   return slug || "motion-dynamics";
 }
 
-function getMediaPages(section, type, workSectionKey) {
+function getMediaPages(section, type, pageKey) {
   const pages = new Set(["/media"]);
 
-  if (section === "Tech" || workSectionKey !== "none") {
+  if (pageKey !== "none") {
+    pages.add(getPageRoute(pageKey));
+  } else if (section === "Tech") {
     pages.add("/work");
   }
 
@@ -1264,10 +1479,12 @@ function getMediaPages(section, type, workSectionKey) {
   return [...pages];
 }
 
-function getHighlightPages(area, tag, workSectionKey) {
+function getHighlightPages(area, tag, pageKey) {
   const pages = new Set();
 
-  if (area === "Motion Dynamics" || workSectionKey !== "none") {
+  if (pageKey !== "none") {
+    pages.add(getPageRoute(pageKey));
+  } else if (area === "Motion Dynamics") {
     pages.add("/work");
   }
 
@@ -1276,6 +1493,22 @@ function getHighlightPages(area, tag, workSectionKey) {
   }
 
   return [...pages];
+}
+
+function getTimelinePages(pageKey) {
+  if (pageKey !== "none") {
+    return [getPageRoute(pageKey)];
+  }
+
+  return ["/about"];
+}
+
+function getPageRoute(pageKey) {
+  if (pageKey === "home") {
+    return "/";
+  }
+
+  return `/${pageKey}`;
 }
 
 function recordItemSummary(store, summary) {
