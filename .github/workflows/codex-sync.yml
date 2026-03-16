@@ -11,7 +11,6 @@ jobs:
       contents: write
       pull-requests: write
     env:
-      # Force the model at the job level to override any Action defaults
       GEMINI_MODEL: "gemini-2.5-flash-lite"
     steps:
       - name: Checkout repository
@@ -24,6 +23,9 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
+
+      - name: Create Gemini config directory
+        run: mkdir -p ~/.gemini
 
       - name: Install dependencies
         run: |
@@ -39,7 +41,12 @@ jobs:
             Execute the 'Drive-to-Site Sync' routine from GEMINI.md:
             1. Fetch new files from Google Drive 'Site_Updates'.
             2. Update content/media.ts and content/timeline.ts.
-            3. Use the 'Telegram Messaging' skill to notify me of the results.
+            3. Notify me of the results:
+               - If the 'Telegram Messaging' skill is available, use it.
+               - Otherwise, use 'run_shell_command' to curl the Telegram Bot API:
+                 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+                 -d chat_id="$TELEGRAM_CHAT_ID" \
+                 -d text="Sync Complete: Updated site with new media."
         env:
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
