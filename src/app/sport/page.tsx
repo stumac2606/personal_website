@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Section from "@/components/Section";
+import MediaGallery from "@/components/MediaGallery";
 import StatChip from "@/components/StatChip";
 import RankingChart from "@/components/RankingChart";
 import RankingTable from "@/components/RankingTable";
 import { withBasePath } from "@/lib/assetPath";
+import { media, mediaPage, mediaSections } from "../../../content/media";
 import {
   challengerTitlesCount,
   sportMeta,
@@ -28,6 +30,9 @@ export const metadata: Metadata = {
 };
 
 export default function SportPage() {
+  const squashMedia = media.filter((item) => item.section === "Squash");
+  const squashSections = mediaSections.filter((section) => section.name === "Squash");
+
   return (
     <>
       <Section
@@ -94,7 +99,6 @@ export default function SportPage() {
         eyebrow={sportPage.eyebrow}
         title={sportPage.rankingTitle}
         subtitle={sportPage.rankingSubtitle}
-        className="border-b-0 pb-24"
       >
         <div className="grid gap-6">
           <div className="flex flex-wrap gap-3">
@@ -135,6 +139,26 @@ export default function SportPage() {
           />
         </div>
       </Section>
+
+      {squashMedia.length > 0 ? (
+        <Section
+          id={`${sportPage.id}-media`}
+          eyebrow={sportPage.eyebrow}
+          title="Squash Gallery"
+          subtitle="Match, training, and competition media."
+          className="border-b-0 pb-24"
+        >
+          <MediaGallery
+            items={squashMedia}
+            sections={squashSections}
+            filters={[{ id: "squash", label: "Squash", sections: ["Squash"] }]}
+            filterLabel={mediaPage.filterLabel}
+            videoFallback={mediaPage.videoFallback}
+          />
+        </Section>
+      ) : (
+        <div />
+      )}
     </>
   );
 }

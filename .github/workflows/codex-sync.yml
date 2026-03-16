@@ -515,12 +515,18 @@ jobs:
           const resultsPath = path.join(path.dirname(process.env.MANIFEST_PATH), "process-results.json");
           const results = fs.existsSync(resultsPath)
             ? JSON.parse(fs.readFileSync(resultsPath, "utf8"))
-            : { appended: [], skipped: [] };
+            : { appended: [], skipped: [], items: [] };
+
+          const details = (results.items || []).map((item) => {
+            const pages = (item.pages || []).join(", ") || "(no visible page)";
+            return `${item.title} (${item.filename}) -> ${pages}`;
+          });
 
           process.stdout.write(JSON.stringify({
             fileCount: (manifest.files || []).length,
             appendedCount: (results.appended || []).length,
             skippedCount: (results.skipped || []).length,
+            details,
           }));
           NODE
           )
@@ -528,6 +534,7 @@ jobs:
           FILE_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.fileCount));")
           APPENDED_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.appendedCount));")
           SKIPPED_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.skippedCount));")
+          DETAILS=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write((data.details || []).join('\n'));")
 
           MESSAGE="Drive-to-Site Sync complete. Downloaded ${FILE_COUNT} files, appended ${APPENDED_COUNT} updates, skipped ${SKIPPED_COUNT} duplicates, build passed, and archived processed Drive files."
 
@@ -535,6 +542,10 @@ jobs:
             MESSAGE="${MESSAGE} Changes were pushed to main."
           else
             MESSAGE="${MESSAGE} No repository diff was created."
+          fi
+
+          if [ -n "${DETAILS}" ]; then
+            MESSAGE="${MESSAGE}\n\nAdded to website:\n${DETAILS}"
           fi
 
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

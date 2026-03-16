@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Section from "@/components/Section";
+import MediaGallery from "@/components/MediaGallery";
 import { withBasePath } from "@/lib/assetPath";
 import { motionHighlights } from "../../../content/highlights";
+import { media, mediaPage, mediaSections } from "../../../content/media";
 import { workMeta, workPage } from "../../../content/projects";
 
 export const metadata: Metadata = {
@@ -16,6 +18,9 @@ export const metadata: Metadata = {
 };
 
 export default function WorkPage() {
+  const techMedia = media.filter((item) => item.section === "Tech");
+  const techSections = mediaSections.filter((section) => section.name === "Tech");
+
   return (
     <>
       <Section
@@ -80,6 +85,23 @@ export default function WorkPage() {
           {workPage.quote.text}
         </blockquote>
       </Section>
+
+      {techMedia.length > 0 ? (
+        <Section
+          id={`${workPage.id}-media`}
+          eyebrow={workPage.eyebrow}
+          title="Tech Gallery"
+          subtitle="Product demos, pitch moments, and Motion Dynamics media."
+        >
+          <MediaGallery
+            items={techMedia}
+            sections={techSections}
+            filters={[{ id: "tech", label: "Tech", sections: ["Tech"] }]}
+            filterLabel={mediaPage.filterLabel}
+            videoFallback={mediaPage.videoFallback}
+          />
+        </Section>
+      ) : null}
 
       <Section
         id={`${workPage.id}-pipeline`}

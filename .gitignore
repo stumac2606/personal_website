@@ -26,6 +26,7 @@
 .DS_Store
 *.pem
 temp_media/
+.sync-logs/
 
 # debug
 npm-debug.log*

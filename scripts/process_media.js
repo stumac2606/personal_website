@@ -15,9 +15,40 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
   GEMINI_MODEL,
 )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY || "")}`;
+const GALLERY_SECTION_VALUES = [
+  "Squash",
+  "Tech",
+  "Flight",
+  "Snowboard",
+  "Life events",
+  "none",
+];
+const TIMELINE_AREA_VALUES = [
+  "Squash",
+  "Motion Dynamics",
+  "Snowboarding",
+  "Paragliding",
+  "Life events",
+  "none",
+];
+const HIGHLIGHT_AREA_VALUES = [
+  "Squash",
+  "Motion Dynamics",
+  "Snowboarding",
+  "Paragliding",
+  "Hobbies",
+  "none",
+];
+const HIGHLIGHT_TAG_VALUES = [
+  "qualification",
+  "award",
+  "project",
+  "moment",
+  "none",
+];
 const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for my website.\n\n${STYLE_GUIDE}\n\nI am providing you with a batch of new images and text files. For each item:\n1. Analyze the content.\n2. Write a short paragraph or sentence interpreting the content in the exact style requested above. Generate SEO alt-text for images.\n3. Decide where this content belongs. The ONLY valid destinations are: media (for general photos/videos), events (for highlights/milestones), or tech (for coding/hardware stuff).\n\nFolder names and relative paths are context hints. Use them to infer what the asset is about when they are helpful, but do not mention internal folder names unless they are genuinely meaningful to the website copy.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "destination": "media" | "events" | "tech",\n      "filename": "original_filename.jpg",\n      "alt_text": "...",\n      "content_text": "Your stylized interpretation here",\n      "date": "YYYY-MM-DD"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\nUse first-person website voice. For personal sport and life updates, prefer "I" and "my". For Motion Dynamics or company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", or "the team" unless another team is explicitly shown.\n\nFolder names and relative paths are context hints. Use them to infer what the asset is about when they are helpful, but do not mention internal folder names unless they are genuinely meaningful to the website copy.\n\nFor each item:\n1. Analyze the content.\n2. Write a human title that fits on a website card. Never reuse a raw filename, UUID, or hash as the title.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life events" and timeline_area="Life events".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life events" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life events" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -26,21 +57,38 @@ const RESPONSE_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          destination: {
-            type: "string",
-            enum: ["media", "events", "tech"],
-          },
           filename: { type: "string" },
+          title: { type: "string" },
           alt_text: { type: "string" },
           content_text: { type: "string" },
           date: { type: "string" },
+          gallery_section: {
+            type: "string",
+            enum: GALLERY_SECTION_VALUES,
+          },
+          timeline_area: {
+            type: "string",
+            enum: TIMELINE_AREA_VALUES,
+          },
+          highlight_area: {
+            type: "string",
+            enum: HIGHLIGHT_AREA_VALUES,
+          },
+          highlight_tag: {
+            type: "string",
+            enum: HIGHLIGHT_TAG_VALUES,
+          },
         },
         required: [
-          "destination",
           "filename",
+          "title",
           "alt_text",
           "content_text",
           "date",
+          "gallery_section",
+          "timeline_area",
+          "highlight_area",
+          "highlight_tag",
         ],
       },
     },
@@ -116,6 +164,7 @@ async function main() {
   const appended = [];
   const skipped = [];
   const copiedAssets = [];
+  const itemSummaries = new Map();
   const manifestByFilename = new Map(
     batchFiles.map((file) => [file.filename, file]),
   );
@@ -123,166 +172,178 @@ async function main() {
   for (const update of parsedResponse.updates) {
     const sourceFile = manifestByFilename.get(update.filename);
     const stableId = buildStableId(update.filename, update.date);
+    const title = sanitizeGeneratedTitle(update.title, sourceFile?.filename);
+    const inferredContext = inferContextFromPath(sourceFile);
+    const gallerySection = resolvePlacement(
+      update.gallery_section,
+      inferredContext.gallerySection,
+    );
+    const timelineArea = resolvePlacement(
+      update.timeline_area,
+      inferredContext.timelineArea,
+    );
+    const highlightArea = resolvePlacement(
+      update.highlight_area,
+      inferredContext.highlightArea,
+    );
+    const highlightTag = resolveHighlightTag(
+      update.highlight_tag,
+      sourceFile,
+      highlightArea,
+    );
 
     if (!sourceFile) {
       throw new Error(`Gemini returned unknown filename: ${update.filename}`);
     }
 
-    if (update.destination === "media") {
-      if (!isImageOrVideo(sourceFile)) {
-        throw new Error(
-          `Gemini classified ${sourceFile.filename} as media, but it is not an image or video.`,
-        );
-      }
-
+    if (isImageOrVideo(sourceFile) && gallerySection !== "none") {
       const mediaAsset = buildMediaAsset(sourceFile, stableId);
       const currentMedia = fileStates.get(MEDIA_TS_PATH);
 
       if (
-        hasExistingMarker(currentMedia, `id: ${JSON.stringify(stableId)}`) ||
-        hasExistingMarker(
-          currentMedia,
-          `sourceFilename: ${JSON.stringify(sourceFile.filename)}`,
-        ) &&
-          hasExistingMarker(
-            currentMedia,
-            `sourceDate: ${JSON.stringify(update.date)}`,
-          ) ||
+        hasSourceDateMarker(currentMedia, sourceFile.filename, update.date) ||
         hasExistingMarker(currentMedia, `src: ${JSON.stringify(mediaAsset.sitePath)}`)
       ) {
         skipped.push({
-          destination: update.destination,
+          destination: "media",
           filename: sourceFile.filename,
           reason: "Duplicate media entry detected.",
         });
-        continue;
+      } else {
+        fs.mkdirSync(mediaAsset.absoluteDir, { recursive: true });
+        fs.copyFileSync(sourceFile.absolutePath, mediaAsset.absolutePath);
+        copiedAssets.push(mediaAsset.sitePath);
+
+        const nextMedia = insertIntoExportedArray(
+          currentMedia,
+          "media",
+          {
+            id: stableId,
+            type: mediaAsset.type,
+            src: mediaAsset.sitePath,
+            title,
+            alt: update.alt_text,
+            section: gallerySection,
+            caption: update.content_text,
+            sourceFilename: sourceFile.filename,
+            sourceDate: update.date,
+            sourceMimeType: sourceFile.mimeType,
+          },
+        );
+
+        fileStates.set(MEDIA_TS_PATH, nextMedia);
+        touchedFiles.add(MEDIA_TS_PATH);
+        appended.push({
+          destination: "media",
+          filename: sourceFile.filename,
+          title,
+          targetFile: path.relative(ROOT_DIR, MEDIA_TS_PATH),
+          pages: getMediaPages(gallerySection, mediaAsset.type),
+        });
+        recordItemSummary(itemSummaries, {
+          filename: sourceFile.filename,
+          title,
+          pages: getMediaPages(gallerySection, mediaAsset.type),
+          placements: [`Media gallery (${gallerySection})`],
+        });
+        console.log(
+          `Successfully appended ${sourceFile.filename} to content/media.ts`,
+        );
       }
-
-      fs.mkdirSync(mediaAsset.absoluteDir, { recursive: true });
-      fs.copyFileSync(sourceFile.absolutePath, mediaAsset.absolutePath);
-      copiedAssets.push(mediaAsset.sitePath);
-
-      const nextMedia = insertIntoExportedArray(
-        currentMedia,
-        "media",
-        {
-          id: stableId,
-          type: mediaAsset.type,
-          src: mediaAsset.sitePath,
-          title: humanizeFilename(sourceFile.filename),
-          alt: update.alt_text,
-          section: "Life events",
-          caption: update.content_text,
-          sourceFilename: sourceFile.filename,
-          sourceDate: update.date,
-          sourceMimeType: sourceFile.mimeType,
-        },
-      );
-
-      fileStates.set(MEDIA_TS_PATH, nextMedia);
-      touchedFiles.add(MEDIA_TS_PATH);
-      appended.push({
-        destination: update.destination,
-        filename: sourceFile.filename,
-        targetFile: path.relative(ROOT_DIR, MEDIA_TS_PATH),
-      });
-      console.log(
-        `Successfully appended ${sourceFile.filename} to content/media.ts`,
-      );
-      continue;
     }
 
-    if (update.destination === "events") {
+    if (timelineArea !== "none") {
       const currentTimeline = fileStates.get(TIMELINE_TS_PATH);
 
       if (
-        hasExistingMarker(currentTimeline, `sourceFilename: ${JSON.stringify(sourceFile.filename)}`) &&
-        hasExistingMarker(currentTimeline, `sourceDate: ${JSON.stringify(update.date)}`)
+        hasSourceDateMarker(currentTimeline, sourceFile.filename, update.date)
       ) {
         skipped.push({
-          destination: update.destination,
+          destination: "timeline",
           filename: sourceFile.filename,
-          reason: "Duplicate event entry detected.",
+          reason: "Duplicate timeline entry detected.",
         });
-        continue;
+      } else {
+        const nextTimeline = insertIntoExportedArray(
+          currentTimeline,
+          "timeline",
+          {
+            year: update.date.slice(0, 4),
+            area: timelineArea,
+            title,
+            meta: update.date,
+            description: update.content_text,
+            sourceFilename: sourceFile.filename,
+            sourceDate: update.date,
+          },
+        );
+
+        fileStates.set(TIMELINE_TS_PATH, nextTimeline);
+        touchedFiles.add(TIMELINE_TS_PATH);
+        appended.push({
+          destination: "timeline",
+          filename: sourceFile.filename,
+          title,
+          targetFile: path.relative(ROOT_DIR, TIMELINE_TS_PATH),
+          pages: ["/about"],
+        });
+        recordItemSummary(itemSummaries, {
+          filename: sourceFile.filename,
+          title,
+          pages: ["/about"],
+          placements: [`Timeline (${timelineArea})`],
+        });
+        console.log(
+          `Successfully appended ${sourceFile.filename} to content/timeline.ts`,
+        );
       }
-
-      const nextTimeline = insertIntoExportedArray(
-        currentTimeline,
-        "timeline",
-        {
-          year: update.date.slice(0, 4),
-          area: "Life events",
-          title: humanizeFilename(sourceFile.filename),
-          meta: update.date,
-          description: update.content_text,
-          sourceFilename: sourceFile.filename,
-          sourceDate: update.date,
-        },
-      );
-
-      fileStates.set(TIMELINE_TS_PATH, nextTimeline);
-      touchedFiles.add(TIMELINE_TS_PATH);
-      appended.push({
-        destination: update.destination,
-        filename: sourceFile.filename,
-        targetFile: path.relative(ROOT_DIR, TIMELINE_TS_PATH),
-      });
-      console.log(
-        `Successfully appended ${sourceFile.filename} to content/timeline.ts`,
-      );
-      continue;
     }
 
-    const currentHighlights = fileStates.get(HIGHLIGHTS_TS_PATH);
-    if (
-      hasExistingMarker(
-        currentHighlights,
-        `id: ${JSON.stringify(stableId)}`,
-      ) ||
-      hasExistingMarker(
-        currentHighlights,
-        `sourceFilename: ${JSON.stringify(sourceFile.filename)}`,
-      ) &&
-        hasExistingMarker(
+    if (highlightArea !== "none") {
+      const currentHighlights = fileStates.get(HIGHLIGHTS_TS_PATH);
+      if (hasSourceDateMarker(currentHighlights, sourceFile.filename, update.date)) {
+        skipped.push({
+          destination: "highlights",
+          filename: sourceFile.filename,
+          reason: "Duplicate highlight entry detected.",
+        });
+      } else {
+        const nextHighlights = insertIntoExportedArray(
           currentHighlights,
-          `sourceDate: ${JSON.stringify(update.date)}`,
-        )
-    ) {
-      skipped.push({
-        destination: update.destination,
-        filename: sourceFile.filename,
-        reason: "Duplicate tech entry detected.",
-      });
-      continue;
+          "highlights",
+          {
+            id: stableId,
+            area: highlightArea,
+            title,
+            meta: update.date,
+            description: update.content_text,
+            date: update.date,
+            tag: highlightTag,
+            sourceFilename: sourceFile.filename,
+            sourceDate: update.date,
+          },
+        );
+
+        fileStates.set(HIGHLIGHTS_TS_PATH, nextHighlights);
+        touchedFiles.add(HIGHLIGHTS_TS_PATH);
+        appended.push({
+          destination: "highlights",
+          filename: sourceFile.filename,
+          title,
+          targetFile: path.relative(ROOT_DIR, HIGHLIGHTS_TS_PATH),
+          pages: getHighlightPages(highlightArea, highlightTag),
+        });
+        recordItemSummary(itemSummaries, {
+          filename: sourceFile.filename,
+          title,
+          pages: getHighlightPages(highlightArea, highlightTag),
+          placements: [`Highlights (${highlightArea})`],
+        });
+        console.log(
+          `Successfully appended ${sourceFile.filename} to content/highlights.ts`,
+        );
+      }
     }
-
-    const nextHighlights = insertIntoExportedArray(
-      currentHighlights,
-      "highlights",
-      {
-        id: stableId,
-        area: "Motion Dynamics",
-        title: humanizeFilename(sourceFile.filename),
-        meta: update.date,
-        description: update.content_text,
-        date: update.date,
-        tag: isTextLike(sourceFile) ? "project" : "moment",
-        sourceFilename: sourceFile.filename,
-        sourceDate: update.date,
-      },
-    );
-
-    fileStates.set(HIGHLIGHTS_TS_PATH, nextHighlights);
-    touchedFiles.add(HIGHLIGHTS_TS_PATH);
-    appended.push({
-      destination: update.destination,
-      filename: sourceFile.filename,
-      targetFile: path.relative(ROOT_DIR, HIGHLIGHTS_TS_PATH),
-    });
-    console.log(
-      `Successfully appended ${sourceFile.filename} to content/highlights.ts`,
-    );
   }
 
   for (const filePath of touchedFiles) {
@@ -294,6 +355,12 @@ async function main() {
     appended,
     skipped,
     copiedAssets,
+    items: [...itemSummaries.values()].map((item) => ({
+      filename: item.filename,
+      title: item.title,
+      pages: [...item.pages].sort(),
+      placements: [...item.placements],
+    })),
     modifiedFiles: [...touchedFiles].map((filePath) =>
       path.relative(ROOT_DIR, filePath),
     ),
@@ -521,7 +588,6 @@ function validateGeminiResponse(payload, batchFiles) {
     );
   }
 
-  const validDestinations = new Set(["media", "events", "tech"]);
   const knownFilenames = new Set(batchFiles.map((file) => file.filename));
   const seenFilenames = new Set();
 
@@ -530,11 +596,17 @@ function validateGeminiResponse(payload, batchFiles) {
       throw new Error("Each update must be an object.");
     }
 
-    if (!validDestinations.has(update.destination)) {
-      throw new Error(`Invalid destination: ${update.destination}`);
-    }
-
-    for (const field of ["filename", "alt_text", "content_text", "date"]) {
+    for (const field of [
+      "filename",
+      "title",
+      "alt_text",
+      "content_text",
+      "date",
+      "gallery_section",
+      "timeline_area",
+      "highlight_area",
+      "highlight_tag",
+    ]) {
       if (typeof update[field] !== "string") {
         throw new Error(`Field ${field} must be a string.`);
       }
@@ -550,6 +622,22 @@ function validateGeminiResponse(payload, batchFiles) {
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(update.date)) {
       throw new Error(`Invalid date format for ${update.filename}: ${update.date}`);
+    }
+
+    if (!GALLERY_SECTION_VALUES.includes(update.gallery_section)) {
+      throw new Error(`Invalid gallery_section for ${update.filename}.`);
+    }
+
+    if (!TIMELINE_AREA_VALUES.includes(update.timeline_area)) {
+      throw new Error(`Invalid timeline_area for ${update.filename}.`);
+    }
+
+    if (!HIGHLIGHT_AREA_VALUES.includes(update.highlight_area)) {
+      throw new Error(`Invalid highlight_area for ${update.filename}.`);
+    }
+
+    if (!HIGHLIGHT_TAG_VALUES.includes(update.highlight_tag)) {
+      throw new Error(`Invalid highlight_tag for ${update.filename}.`);
     }
 
     seenFilenames.add(update.filename);
@@ -578,6 +666,13 @@ function humanizeFilename(filename) {
 
 function hasExistingMarker(fileContents, marker) {
   return fileContents.includes(marker);
+}
+
+function hasSourceDateMarker(fileContents, filename, isoDate) {
+  return (
+    hasExistingMarker(fileContents, `sourceFilename: ${JSON.stringify(filename)}`) &&
+    hasExistingMarker(fileContents, `sourceDate: ${JSON.stringify(isoDate)}`)
+  );
 }
 
 function insertIntoExportedArray(fileContents, exportName, objectValue) {
@@ -653,6 +748,144 @@ function findMatchingBracket(fileContents, startIndex, openChar, closeChar) {
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sanitizeGeneratedTitle(title, fallbackFilename) {
+  const normalized = (title || "").replace(/\s+/g, " ").trim();
+  const fallbackTitle = humanizeFilename(fallbackFilename || "update");
+
+  if (!normalized) {
+    return fallbackTitle;
+  }
+
+  const fallbackStem = path.basename(fallbackFilename || "", path.extname(fallbackFilename || ""));
+  const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normalized);
+  const looksLikeFallbackStem =
+    fallbackStem &&
+    normalized.replace(/\s+/g, "-").toLowerCase() === fallbackStem.toLowerCase();
+
+  if (looksLikeUuid || looksLikeFallbackStem) {
+    return fallbackTitle;
+  }
+
+  return normalized;
+}
+
+function inferContextFromPath(file) {
+  const haystack = `${file.localRelativePath || ""} ${file.filename || ""}`.toLowerCase();
+
+  if (/(venturefest|pitchup|motion dynamics|pitch|startup|business|investor|product|demo|tech)/.test(haystack)) {
+    return {
+      gallerySection: "Tech",
+      timelineArea: "Motion Dynamics",
+      highlightArea: "Motion Dynamics",
+    };
+  }
+
+  if (/(snow|snowboard|casi|park)/.test(haystack)) {
+    return {
+      gallerySection: "Snowboard",
+      timelineArea: "Snowboarding",
+      highlightArea: "none",
+    };
+  }
+
+  if (/(flight|paraglid|wing|launch)/.test(haystack)) {
+    return {
+      gallerySection: "Flight",
+      timelineArea: "Paragliding",
+      highlightArea: "none",
+    };
+  }
+
+  if (/(squash|psa|tournament|open|match|court)/.test(haystack)) {
+    return {
+      gallerySection: "Squash",
+      timelineArea: "Squash",
+      highlightArea: "none",
+    };
+  }
+
+  return {
+    gallerySection: isImageOrVideo(file) ? "Life events" : "none",
+    timelineArea: "Life events",
+    highlightArea: "none",
+  };
+}
+
+function resolvePlacement(value, fallback) {
+  return value && value !== "none" ? value : fallback || "none";
+}
+
+function resolveHighlightTag(value, sourceFile, highlightArea) {
+  if (highlightArea === "none") {
+    return "none";
+  }
+
+  if (value && value !== "none") {
+    return value;
+  }
+
+  if (highlightArea === "Motion Dynamics") {
+    return isTextLike(sourceFile) ? "project" : "moment";
+  }
+
+  if (highlightArea === "Snowboarding") {
+    return "qualification";
+  }
+
+  return isTextLike(sourceFile) ? "project" : "moment";
+}
+
+function getMediaPages(section, type) {
+  const pages = new Set(["/media"]);
+
+  if (section === "Tech") {
+    pages.add("/work");
+  }
+
+  if (section === "Snowboard" && type === "video") {
+    pages.add("/snowboard");
+  }
+
+  if (section === "Squash") {
+    pages.add("/sport");
+  }
+
+  return [...pages];
+}
+
+function getHighlightPages(area, tag) {
+  const pages = new Set();
+
+  if (area === "Motion Dynamics") {
+    pages.add("/work");
+  }
+
+  if (area === "Snowboarding" && tag === "qualification") {
+    pages.add("/snowboard");
+  }
+
+  return [...pages];
+}
+
+function recordItemSummary(store, summary) {
+  const existing = store.get(summary.filename) || {
+    filename: summary.filename,
+    title: summary.title,
+    pages: new Set(),
+    placements: new Set(),
+  };
+
+  existing.title = summary.title;
+  for (const page of summary.pages || []) {
+    existing.pages.add(page);
+  }
+  for (const placement of summary.placements || []) {
+    existing.placements.add(placement);
+  }
+
+  store.set(summary.filename, existing);
 }
 
 function formatObjectLiteral(objectValue, indent) {
