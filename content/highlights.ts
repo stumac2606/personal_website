@@ -18,6 +18,7 @@ export type Highlight = {
   date?: string;
   tag?: HighlightTag;
   featured?: boolean;
+  workSection?: string;
   sourceFilename?: string;
   sourceDate?: string;
   sourceFolder?: string;
@@ -62,10 +63,10 @@ export const highlights: Highlight[] = [
     id: "serve-pipeline",
     area: "Motion Dynamics",
     title: "Built a tennis serve analysis pipeline",
-    description:
-      "Designed and built a video-based serve analysis pipeline: movement extraction + object dynamics -> multi-layer insights for performance and decision-making.",
+    description: "Built a serve pipeline from video, movement extraction, and object tracking.",
     tag: "project",
     featured: true,
+    workSection: "motion-dynamics",
   },
   {
     id: "investment-forum",
@@ -74,6 +75,7 @@ export const highlights: Highlight[] = [
     description:
       "It's strange getting into my squash kit for a completely different purpose now; pitching our sport tech company... Great highlight performing a bang average tennis serve on stage.",
     tag: "moment",
+    workSection: "motion-dynamics",
   },
   {
     id: "casi-level-1",
@@ -107,6 +109,7 @@ export const highlights: Highlight[] = [
       "Pitched how we turn movement footage into clearer coaching decisions.",
     date: "2026-03-16",
     tag: "moment",
+    workSection: "motion-dynamics",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
     sourceFolder: "PitchUp competition - VentureFest 2026",
@@ -116,7 +119,7 @@ export const highlights: Highlight[] = [
     area: "Snowboarding",
     title: "Penken Park Jump Progression",
     meta: "2026-03-16",
-    description: "Refining aerial control and landing mechanics in Penken Park. Consistent execution requires precise body positioning and timing, translating into measurable performance gains.",
+    description: "Working on cleaner airtime, timing, and landings in Penken Park.",
     date: "2026-03-16",
     tag: "moment",
     sourceFilename: "Snowboard_jump.MOV",

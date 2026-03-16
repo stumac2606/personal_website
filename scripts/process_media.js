@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -9,6 +10,7 @@ const RESULTS_PATH = path.join(TEMP_MEDIA_DIR, "process-results.json");
 const MEDIA_TS_PATH = path.join(ROOT_DIR, "content", "media.ts");
 const TIMELINE_TS_PATH = path.join(ROOT_DIR, "content", "timeline.ts");
 const HIGHLIGHTS_TS_PATH = path.join(ROOT_DIR, "content", "highlights.ts");
+const PROJECTS_TS_PATH = path.join(ROOT_DIR, "content", "projects.ts");
 const PUBLIC_MEDIA_DIR = path.join(ROOT_DIR, "public", "media");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
@@ -50,7 +52,7 @@ const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
 const BRAND_GUIDE =
   "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, use highlight_area="Motion Dynamics".\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on the Work page, also return work_section_key, work_section_title, and optional work_section_intro.\n- Use "motion-dynamics" for general company items that do not need a more specific Work subsection.\n- Use a more specific work_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream inside Work.\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- For non-work items, return "none" for the work section fields.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "work_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "work_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "work_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -80,6 +82,9 @@ const RESPONSE_SCHEMA = {
             type: "string",
             enum: HIGHLIGHT_TAG_VALUES,
           },
+          work_section_key: { type: "string" },
+          work_section_title: { type: "string" },
+          work_section_intro: { type: "string" },
         },
         required: [
           "filename",
@@ -91,6 +96,9 @@ const RESPONSE_SCHEMA = {
           "timeline_area",
           "highlight_area",
           "highlight_tag",
+          "work_section_key",
+          "work_section_title",
+          "work_section_intro",
         ],
       },
     },
@@ -178,10 +186,12 @@ async function main() {
   const mediaState = fs.readFileSync(MEDIA_TS_PATH, "utf8");
   const timelineState = fs.readFileSync(TIMELINE_TS_PATH, "utf8");
   const highlightsState = fs.readFileSync(HIGHLIGHTS_TS_PATH, "utf8");
+  const projectsState = fs.readFileSync(PROJECTS_TS_PATH, "utf8");
   const fileStates = new Map([
     [MEDIA_TS_PATH, mediaState],
     [TIMELINE_TS_PATH, timelineState],
     [HIGHLIGHTS_TS_PATH, highlightsState],
+    [PROJECTS_TS_PATH, projectsState],
   ]);
   const touchedFiles = new Set();
   const appended = [];
@@ -228,9 +238,48 @@ async function main() {
       sourceFile,
       highlightArea,
     );
+    const workSectionKey = resolveWorkSectionKey(
+      update.work_section_key,
+      sourceFile,
+      gallerySection,
+      highlightArea,
+    );
+    const workSectionTitle = resolveWorkSectionTitle(
+      update.work_section_title,
+      workSectionKey,
+      title,
+    );
+    const workSectionIntro = resolveWorkSectionIntro(
+      update.work_section_intro,
+      workSectionKey,
+      workSectionTitle,
+      brandContext,
+    );
 
     if (!sourceFile) {
       throw new Error(`Gemini returned unknown filename: ${update.filename}`);
+    }
+
+    if (workSectionKey !== "none") {
+      const currentProjects = fileStates.get(PROJECTS_TS_PATH);
+      if (!hasWorkSection(currentProjects, workSectionKey)) {
+        const nextProjects = insertIntoExportedArray(
+          currentProjects,
+          "workSections",
+          {
+            key: workSectionKey,
+            title: workSectionTitle,
+            intro: workSectionIntro,
+            order: 50,
+          },
+        );
+
+        fileStates.set(PROJECTS_TS_PATH, nextProjects);
+        touchedFiles.add(PROJECTS_TS_PATH);
+        console.log(
+          `Successfully appended ${workSectionKey} to content/projects.ts`,
+        );
+      }
     }
 
     if (isImageOrVideo(sourceFile) && gallerySection !== "none") {
@@ -261,6 +310,7 @@ async function main() {
             title,
             alt: altText,
             section: gallerySection,
+            workSection: workSectionKey !== "none" ? workSectionKey : undefined,
             caption: contentText,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
@@ -275,13 +325,18 @@ async function main() {
           filename: sourceFile.filename,
           title,
           targetFile: path.relative(ROOT_DIR, MEDIA_TS_PATH),
-          pages: getMediaPages(gallerySection, mediaAsset.type),
+          pages: getMediaPages(gallerySection, mediaAsset.type, workSectionKey),
         });
         recordItemSummary(itemSummaries, {
           filename: sourceFile.filename,
           title,
-          pages: getMediaPages(gallerySection, mediaAsset.type),
-          placements: [`Media gallery (${gallerySection})`],
+          pages: getMediaPages(gallerySection, mediaAsset.type, workSectionKey),
+          placements: [
+            `Media gallery (${gallerySection})`,
+            ...(workSectionKey !== "none"
+              ? [`Work section (${workSectionTitle})`]
+              : []),
+          ],
         });
         console.log(
           `Successfully appended ${sourceFile.filename} to content/media.ts`,
@@ -378,6 +433,7 @@ async function main() {
             description: contentText,
             date: update.date,
             tag: highlightTag,
+            workSection: workSectionKey !== "none" ? workSectionKey : undefined,
             sourceFilename: sourceFile.filename,
             sourceDate: update.date,
             sourceFolder,
@@ -392,13 +448,22 @@ async function main() {
           filename: sourceFile.filename,
           title,
           targetFile: path.relative(ROOT_DIR, HIGHLIGHTS_TS_PATH),
-          pages: getHighlightPages(highlightArea, highlightTag),
+          pages: getHighlightPages(highlightArea, highlightTag, workSectionKey),
         });
         recordItemSummary(itemSummaries, {
           filename: sourceFile.filename,
           title,
-          pages: getHighlightPages(highlightArea, highlightTag),
-          placements: [`Highlights (${highlightArea})`],
+          pages: getHighlightPages(
+            highlightArea,
+            highlightTag,
+            workSectionKey,
+          ),
+          placements: [
+            `Highlights (${highlightArea})`,
+            ...(workSectionKey !== "none"
+              ? [`Work section (${workSectionTitle})`]
+              : []),
+          ],
         });
         console.log(
           `Successfully appended ${sourceFile.filename} to content/highlights.ts`,
@@ -479,7 +544,7 @@ function buildBatchContext(batchFiles) {
     }
 
     const noteParts = value.textFiles.map((file) => {
-      const textContent = fs.readFileSync(file.absolutePath, "utf8").trim();
+      const textContent = readTextLikeFile(file).trim();
       const concise = textContent.length > 2000
         ? `${textContent.slice(0, 2000)}\n[TRUNCATED]`
         : textContent;
@@ -517,7 +582,7 @@ function findDuplicateNames(values) {
 function isTextLike(file) {
   return (
     file.mimeType.startsWith("text/") ||
-    [".txt", ".md", ".markdown", ".json", ".csv"].includes(
+    [".txt", ".md", ".markdown", ".json", ".csv", ".docx"].includes(
       path.extname(file.absolutePath).toLowerCase(),
     )
   );
@@ -609,7 +674,7 @@ async function sendGeminiRequest(batchFiles, batchContext) {
     );
 
     if (isTextLike(file)) {
-      const textContent = fs.readFileSync(file.absolutePath, "utf8");
+      const textContent = readTextLikeFile(file);
       const normalizedText = textContent.trim();
       const truncatedText = normalizedText.length > 40000
         ? `${normalizedText.slice(0, 40000)}\n[TRUNCATED FOR BATCH LIMITS]`
@@ -727,6 +792,9 @@ function validateGeminiResponse(payload, batchFiles) {
       "timeline_area",
       "highlight_area",
       "highlight_tag",
+      "work_section_key",
+      "work_section_title",
+      "work_section_intro",
     ]) {
       if (typeof update[field] !== "string") {
         throw new Error(`Field ${field} must be a string.`);
@@ -775,6 +843,37 @@ function buildStableId(filename, isoDate) {
   return `${slug}-${isoDate}`.replace(/-+/g, "-");
 }
 
+function readTextLikeFile(file) {
+  const extension = path.extname(file.absolutePath).toLowerCase();
+
+  if (extension === ".docx") {
+    try {
+      const xml = execFileSync(
+        "unzip",
+        ["-p", file.absolutePath, "word/document.xml"],
+        { encoding: "utf8" },
+      );
+
+      return xml
+        .replace(/<w:p[^>]*>/g, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+\n/g, "\n")
+        .replace(/\n\s+/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .trim();
+    } catch {
+      return humanizeFilename(file.filename);
+    }
+  }
+
+  return fs.readFileSync(file.absolutePath, "utf8");
+}
+
 function humanizeFilename(filename) {
   const stem = path.basename(filename, path.extname(filename));
   const spaced = stem.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
@@ -787,6 +886,13 @@ function humanizeFilename(filename) {
 
 function hasExistingMarker(fileContents, marker) {
   return fileContents.includes(marker);
+}
+
+function hasWorkSection(fileContents, workSectionKey) {
+  return hasExistingMarker(
+    fileContents,
+    `key: ${JSON.stringify(workSectionKey)}`,
+  );
 }
 
 function hasSourceDateMarker(fileContents, filename, isoDate) {
@@ -1005,7 +1111,7 @@ function normalizeAltText(text, title, brandContext) {
 function inferContextFromPath(file) {
   const haystack = `${file.localRelativePath || ""} ${file.filename || ""}`.toLowerCase();
 
-  if (/(venturefest|pitchup|motion dynamics|pitch|startup|business|investor|product|demo|tech)/.test(haystack)) {
+  if (/(venturefest|pitchup|motion dynamics|pitch|startup|business|investor|product|demo|tech|golf analysis|swing analysis)/.test(haystack)) {
     return {
       gallerySection: "Tech",
       timelineArea: "Motion Dynamics",
@@ -1083,10 +1189,67 @@ function resolveHighlightTag(value, sourceFile, highlightArea) {
   return isTextLike(sourceFile) ? "project" : "moment";
 }
 
-function getMediaPages(section, type) {
+function resolveWorkSectionKey(value, sourceFile, gallerySection, highlightArea) {
+  if (value && value !== "none") {
+    return slugifyWorkSectionKey(value);
+  }
+
+  if (highlightArea === "Motion Dynamics" || gallerySection === "Tech") {
+    return "motion-dynamics";
+  }
+
+  return "none";
+}
+
+function resolveWorkSectionTitle(value, workSectionKey, fallbackTitle) {
+  if (workSectionKey === "none") {
+    return "none";
+  }
+
+  const normalized = (value || "").replace(/\s+/g, " ").trim();
+  if (normalized && normalized.toLowerCase() !== "none") {
+    return normalized;
+  }
+
+  if (workSectionKey === "motion-dynamics") {
+    return "Motion Dynamics";
+  }
+
+  return humanizeFilename(workSectionKey);
+}
+
+function resolveWorkSectionIntro(value, workSectionKey, workSectionTitle, brandContext) {
+  if (workSectionKey === "none") {
+    return "none";
+  }
+
+  const normalized = (value || "").replace(/\s+/g, " ").trim();
+  if (normalized && normalized.toLowerCase() !== "none") {
+    return shortenToWordLimit(normalized, 16);
+  }
+
+  if (workSectionKey === "motion-dynamics") {
+    return "Product demos, technical milestones, and commercial proof points.";
+  }
+
+  return brandContext === "company"
+    ? `${workSectionTitle} work, demos, and coaching-facing analysis.`
+    : `${workSectionTitle} updates and supporting media.`;
+}
+
+function slugifyWorkSectionKey(value) {
+  const slug = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || "motion-dynamics";
+}
+
+function getMediaPages(section, type, workSectionKey) {
   const pages = new Set(["/media"]);
 
-  if (section === "Tech") {
+  if (section === "Tech" || workSectionKey !== "none") {
     pages.add("/work");
   }
 
@@ -1101,10 +1264,10 @@ function getMediaPages(section, type) {
   return [...pages];
 }
 
-function getHighlightPages(area, tag) {
+function getHighlightPages(area, tag, workSectionKey) {
   const pages = new Set();
 
-  if (area === "Motion Dynamics") {
+  if (area === "Motion Dynamics" || workSectionKey !== "none") {
     pages.add("/work");
   }
 

@@ -17,6 +17,7 @@ export type MediaItem = {
   title: string;
   alt?: string;
   section: MediaSectionName;
+  workSection?: string;
   caption?: string;
   mode?: MediaMode;
   sourceFilename?: string;
@@ -31,7 +32,7 @@ export type MediaSection = {
   caption?: string;
 };
 
-export type MediaFilterId = "all" | "tech" | "snow" | "flight" | "squash";
+export type MediaFilterId = string;
 
 export const mediaPage = {
   id: "media",
@@ -101,6 +102,7 @@ export const media: MediaItem[] = [
     src: "/media/images/tennis_serve_on_stage_for_pitch.JPG",
     title: "Serve demo on stage",
     section: "Tech",
+    workSection: "motion-dynamics",
   },
   {
     id: "tech-pitching",
@@ -108,6 +110,7 @@ export const media: MediaItem[] = [
     src: "/media/images/serious_image_of_me_pitching.JPG",
     title: "Pitching Motion Dynamics",
     section: "Tech",
+    workSection: "motion-dynamics",
   },
   {
     id: "tech-serve-analysis",
@@ -116,6 +119,7 @@ export const media: MediaItem[] = [
     title: "Tennis serve analysis",
     caption: "Video -> movement extraction -> biomechanics insights.",
     section: "Tech",
+    workSection: "motion-dynamics",
   },
   {
     id: "flight-paragliding",
@@ -176,6 +180,7 @@ export const media: MediaItem[] = [
     title: "VentureFest pitch",
     alt: "Stuart pitching Motion Dynamics on stage at VentureFest 2026.",
     section: "Tech",
+    workSection: "motion-dynamics",
     caption: "Pitched how we turn movement footage into clearer coaching decisions.",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
@@ -188,6 +193,7 @@ export const media: MediaItem[] = [
     title: "VentureFest team photo",
     alt: "Motion Dynamics team after the VentureFest 2026 pitch.",
     section: "Tech",
+    workSection: "motion-dynamics",
     caption: "A quick team photo after the pitch.",
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
@@ -200,7 +206,7 @@ export const media: MediaItem[] = [
     title: "Penken Park Jump Progression",
     alt: "Snowboarder launching off a large jump in Penken Park.",
     section: "Snowboard",
-    caption: "Refining aerial control and landing mechanics in Penken Park. Consistent execution requires precise body positioning and timing, translating into measurable performance gains.",
+    caption: "Working on cleaner airtime, timing, and landings in Penken Park.",
     sourceFilename: "Snowboard_jump.MOV",
     sourceDate: "2026-03-16",
     sourceMimeType: "video/quicktime",

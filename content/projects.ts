@@ -4,6 +4,13 @@ export type Project = {
   tags: string[];
 };
 
+export type WorkSection = {
+  key: string;
+  title: string;
+  intro?: string;
+  order: number;
+};
+
 export const workPage = {
   id: "work",
   navLabel: "Work",
@@ -39,6 +46,15 @@ export const workMeta = {
   description:
     "Motion Dynamics highlights, the pipeline behind the platform, and product moments.",
 };
+
+export const workSections: WorkSection[] = [
+  {
+    key: "motion-dynamics",
+    title: "Motion Dynamics",
+    intro: "Product demos, technical milestones, and commercial proof points.",
+    order: 10,
+  },
+];
 
 export const projects: Project[] = [
   {
