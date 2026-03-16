@@ -75,8 +75,7 @@ jobs:
             echo "::error::Missing GEMINI.md in repository root. Gemini agent prompt depends on this file."
             exit 1
           fi
-
-          if ! rg -n "Drive-to-Site Sync|gws|Telegram" GEMINI.md >/dev/null; then
+          if ! grep -qiE "drive-to-site sync|\\bgws\\b|telegram" GEMINI.md; then
             echo "::warning::GEMINI.md does not contain expected routine keywords. The Gemini prompt may not execute as expected."
           fi
 
@@ -98,10 +97,22 @@ jobs:
             gws --version
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "install_error<<EOF" >> "$GITHUB_OUTPUT"
-            sed -n '1,30p' "$INSTALL_LOG" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
-            echo "::error title=Google Workspace CLI missing::Could not install `gws`. See install_error output above."
+            INSTALL_ERR="$(sed -n '1,30p' "$INSTALL_LOG" | tr -d '\n' | sed 's/|/\\|/g' | sed 's/\"/\\"/g')"
+            echo "install_error=$INSTALL_ERR" >> "$GITHUB_OUTPUT"
+            echo "::error title=Google Workspace CLI missing::Could not install gws. See install_error output above."
+          fi
+
+      - name: Detect Google Workspace query flag
+        id: gws-query
+        if: steps.gws-install.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          if gws drive files list --help | grep -q -- "--q"; then
+            echo "query_flag=--q" >> "$GITHUB_OUTPUT"
+          elif gws drive files list --help | grep -q -- "--query"; then
+            echo "query_flag=--query" >> "$GITHUB_OUTPUT"
+          else
+            echo "query_flag=--query" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Notify skip due to missing Google Workspace CLI
@@ -194,15 +205,16 @@ jobs:
           else
             echo "auth=false" >> "$GITHUB_OUTPUT"
             echo "::error::gws could not authenticate with GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE."
-            echo "auth_error<<EOF" >> "$GITHUB_OUTPUT"
-            sed -n '1,40p' "$AUTH_LOG" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            AUTH_ERR="$(sed -n '1,40p' "$AUTH_LOG" | tr -d '\n' | sed 's/|/\\|/g' | sed 's/\"/\\"/g')"
+            echo "auth_error=$AUTH_ERR" >> "$GITHUB_OUTPUT"
             cat "$AUTH_LOG"
             exit 1
           fi
 
       - name: Run Gemini Agent
+        id: gemini-run
         if: steps.gws-creds-check.outputs.has_creds == 'true'
+        continue-on-error: true
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
@@ -215,6 +227,7 @@ jobs:
             2. For every new image or video, use your vision capabilities to analyze the content, determine its proper categorization (Squash, Tech, Flight, etc.), and generate SEO-optimized alt text and metadata.
             3. Autonomously identify and update all necessary data files and pages within the codebase to integrate this new content, ensuring strict TypeScript consistency and following existing architectural patterns.
             4. For Drive operations, use Google Workspace CLI `gws` with only supported arguments.
+               - Use this verified query flag from this runner: `${{ steps.gws-query.outputs.query_flag }}`.
                - First, resolve the Drive folder ID (without using `--folder-path`) and use parent filtering.
                - Use one of these equivalent query flags depending on your `gws` version: `--query` or `--q`.
 
@@ -251,18 +264,26 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Notify on workflow failure
-        if: failure()
+        if: always() && (
+          steps.gws-install.outcome == 'failure' ||
+          steps.gws-creds-check.outcome == 'failure' ||
+          steps.gemini-run.outcome == 'failure' ||
+          failure()
+        )
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
             FAIL_REASON="Workflow failed. Check logs for step outputs:"
+            if [ "${{ steps.gemini-run.outcome }}" = "failure" ]; then
+              FAIL_REASON="$FAIL_REASON Gemini action failed (likely quota/auth/CLI response issues)."
+            fi
             if [ "${{ steps.gws-install.outcome }}" = "success" ] && [ "${{ steps.gws-install.outputs.available }}" != "true" ]; then
               FAIL_REASON="$FAIL_REASON gws unavailable."
             elif [ "${{ steps.gws-creds-check.outcome }}" != "success" ]; then
               FAIL_REASON="$FAIL_REASON GWS credential check failed."
-            else
+            elif [ "${{ steps.gemini-run.outcome }}" != "success" ]; then
               FAIL_REASON="$FAIL_REASON Gemini action failed."
             fi
 
