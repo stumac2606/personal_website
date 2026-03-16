@@ -54,6 +54,12 @@ export const workSections: WorkSection[] = [
     intro: "Product demos, technical milestones, and commercial proof points.",
     order: 10,
   },
+  {
+    key: "golf-analysis",
+    title: "Golf Analysis",
+    intro: "We apply our movement-analysis approach to golf, turning biomechanical data into actionable insights for coaches and",
+    order: 50,
+  },
 ];
 
 export const projects: Project[] = [

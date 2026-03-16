@@ -96,4 +96,14 @@ export const timeline: TimelineItem[] = [
     sourceFilename: "Snowboard_jump.MOV",
     sourceDate: "2026-03-16",
   },
+  {
+    year: "2026",
+    area: "Motion Dynamics",
+    title: "Golf Swing Analysis Setup",
+    meta: "2026-02-03",
+    description: "We apply our movement analysis to golf for precise swing feedback.",
+    sourceFilename: "384CD551-69CF-43D6-8303-1C35804F8A2C_1_105_c.jpeg",
+    sourceDate: "2026-02-03",
+    sourceFolder: "PGA - Golf analysis",
+  },
 ];

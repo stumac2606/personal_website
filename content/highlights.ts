@@ -125,6 +125,19 @@ export const highlights: Highlight[] = [
     sourceFilename: "Snowboard_jump.MOV",
     sourceDate: "2026-03-16",
   },
+  {
+    id: "384cd551-69cf-43d6-8303-1c35804f8a2c-1-105-c-2026-02-03",
+    area: "Motion Dynamics",
+    title: "Golf Swing Analysis Setup",
+    meta: "2026-02-03",
+    description: "We apply our movement analysis to golf for precise swing feedback.",
+    date: "2026-02-03",
+    tag: "project",
+    workSection: "golf-analysis",
+    sourceFilename: "384CD551-69CF-43D6-8303-1C35804F8A2C_1_105_c.jpeg",
+    sourceDate: "2026-02-03",
+    sourceFolder: "PGA - Golf analysis",
+  },
 ];
 
 export const featuredSection = {
