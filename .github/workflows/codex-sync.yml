@@ -318,12 +318,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Notify on workflow failure
-        if: always() && (
-          steps.gws-install.outcome == 'failure' ||
-          steps.gws-creds-check.outcome == 'failure' ||
-          steps.gemini-run.outcome == 'failure' ||
-          failure()
-        )
+        if: always() && (steps.gws-install.outcome == 'failure' || steps.gws-creds-check.outcome == 'failure' || steps.gemini-run.outcome == 'failure' || failure())
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
