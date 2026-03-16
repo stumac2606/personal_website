@@ -15,9 +15,13 @@ export type MediaItem = {
   type: MediaType;
   src: string;
   title: string;
+  alt?: string;
   section: MediaSectionName;
   caption?: string;
   mode?: MediaMode;
+  sourceFilename?: string;
+  sourceDate?: string;
+  sourceMimeType?: string;
 };
 
 export type MediaSection = {

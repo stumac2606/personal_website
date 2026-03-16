@@ -18,6 +18,8 @@ export type Highlight = {
   date?: string;
   tag?: HighlightTag;
   featured?: boolean;
+  sourceFilename?: string;
+  sourceDate?: string;
 };
 
 export const highlights: Highlight[] = [

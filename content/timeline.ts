@@ -4,7 +4,8 @@ export type TimelineArea =
   | "Squash"
   | "Motion Dynamics"
   | "Snowboarding"
-  | "Paragliding";
+  | "Paragliding"
+  | "Life events";
 
 export type TimelineItem = {
   year: string;
@@ -12,6 +13,8 @@ export type TimelineItem = {
   title: string;
   meta?: string;
   description?: string;
+  sourceFilename?: string;
+  sourceDate?: string;
 };
 
 export const timelineSection = {

@@ -338,7 +338,7 @@ function MediaRail({
                     {item.type === "image" ? (
                       <Image
                         src={resolvedSrc}
-                        alt={item.title}
+                        alt={item.alt ?? item.title}
                         fill
                         sizes="(min-width: 1024px) 520px, (min-width: 640px) 420px, 80vw"
                         className={objectClass}

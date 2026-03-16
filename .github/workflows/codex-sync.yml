@@ -9,15 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     env:
       GEMINI_MODEL: "gemini-2.5-flash-lite"
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      GWS_CLI_PACKAGE: "@googleworkspace/cli"
+      TEMP_MEDIA_DIR: "${{ github.workspace }}/temp_media"
+      SYNC_LOG_PATH: "${{ runner.temp }}/drive-sync.log"
+      PROCESS_LOG_PATH: "${{ runner.temp }}/process-media.log"
+      BUILD_LOG_PATH: "${{ runner.temp }}/build.log"
+      COMMIT_LOG_PATH: "${{ runner.temp }}/commit-push.log"
+      MOVE_LOG_PATH: "${{ runner.temp }}/drive-move.log"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Record checkout head
+        id: checkout-head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -25,47 +36,482 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Create Gemini config directory
-        run: mkdir -p ~/.gemini
+      - name: Check workflow inputs
+        id: input-check
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "::error::Missing secret: GEMINI_API_KEY"
+            exit 1
+          fi
+
+          if [ -z "${GWS_CREDENTIALS:-}" ]; then
+            echo "::error::Missing secret: GWS_CREDENTIALS"
+            exit 1
+          fi
+
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "telegram_configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "telegram_configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Telegram credentials are not configured; notifications will be skipped."
+          fi
 
       - name: Install dependencies
         run: |
+          set -euo pipefail
           npm install
 
-      - name: Check for new Drive files (Efficient Step)
-        id: check_files
+      - name: Install Google Workspace CLI
         run: |
-          # Use gws to list files directly in bash (Zero AI Cost)
-          FILES=$(gws drive list --query "name contains 'Site_Updates'" --output json | jq -r '.[0].id' | xargs -I {} gws drive list --query "'{}' in parents" --output json)
-          COUNT=$(echo "$FILES" | jq '. | length')
-          echo "found_count=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "file_list<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$FILES" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          npm install --silent --no-audit --global "${GWS_CLI_PACKAGE}"
+          gws --version
+
+      - name: Configure Google Workspace credentials
+        id: gws-creds
         env:
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          CRED_FILE="${RUNNER_TEMP}/gws-credentials.json"
 
-      - name: Run Gemini Agent (Only if files exist)
-        if: steps.check_files.outputs.found_count > 0
-        uses: google-github-actions/run-gemini-cli@v0.1.20
-        with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: "gemini-2.5-flash-lite"
-          gemini_debug: false
-          prompt: |
-            New media detected in Google Drive:
-            ${{ steps.check_files.outputs.file_list }}
+          if [[ "${GWS_CREDENTIALS}" == "{"* ]]; then
+            printf '%s' "${GWS_CREDENTIALS}" > "${CRED_FILE}"
+          else
+            printf '%s' "${GWS_CREDENTIALS}" | base64 --decode > "${CRED_FILE}" || {
+              echo "::error::GWS_CREDENTIALS is not valid base64-encoded JSON."
+              exit 1
+            }
+          fi
 
-            1. Download these files using 'gws drive download'.
-            2. Use your vision capabilities to analyze them and determine their categorization.
-            3. Autonomously update the relevant data files (media.ts, timeline.ts, etc.) to integrate them.
-            4. Notify me via Telegram ($TELEGRAM_CHAT_ID) that the sync is complete.
+          node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));" "${CRED_FILE}"
+
+          chmod 600 "${CRED_FILE}"
+          echo "credentials_file=${CRED_FILE}" >> "$GITHUB_OUTPUT"
+          echo "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=${CRED_FILE}" >> "$GITHUB_ENV"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=${CRED_FILE}" >> "$GITHUB_ENV"
+
+      - name: Sync Google Drive updates
+        id: drive-sync
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          : > "${SYNC_LOG_PATH}"
+          echo "Starting Google Drive sync..." | tee -a "${SYNC_LOG_PATH}"
+          rm -rf "${TEMP_MEDIA_DIR}"
+          mkdir -p "${TEMP_MEDIA_DIR}"
+          export UPDATES_FOLDER_NAME="Site_Updates"
+          export PROCESSED_FOLDER_NAME="Site_Updates_Processed"
+
+          node <<'NODE' 2>&1 | tee -a "${SYNC_LOG_PATH}"
+          const { execFileSync } = require("node:child_process");
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          const tempDir = process.env.TEMP_MEDIA_DIR;
+          const updatesFolderName = process.env.UPDATES_FOLDER_NAME;
+          const processedFolderName = process.env.PROCESSED_FOLDER_NAME;
+          const manifestPath = path.join(tempDir, "manifest.json");
+          const folderMime = "application/vnd.google-apps.folder";
+          const exportMap = {
+            "application/vnd.google-apps.document": {
+              mimeType: "text/plain",
+              extension: ".txt",
+            },
+            "application/vnd.google-apps.spreadsheet": {
+              mimeType: "text/csv",
+              extension: ".csv",
+            },
+            "application/vnd.google-apps.drawing": {
+              mimeType: "image/png",
+              extension: ".png",
+            },
+          };
+
+          const execGwsJson = (args) => {
+            const stdout = execFileSync("gws", args, { encoding: "utf8" });
+            return stdout.trim() ? JSON.parse(stdout) : {};
+          };
+
+          const execGwsBinary = (args) => {
+            execFileSync("gws", args, { stdio: "inherit" });
+          };
+
+          const sanitizeSegment = (value) => {
+            const sanitized = value
+              .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
+              .trim();
+            return sanitized || "untitled";
+          };
+
+          const listByQuery = (query) => {
+            const files = [];
+            let pageToken = undefined;
+
+            do {
+              const params = {
+                q: query,
+                pageSize: 100,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true,
+                fields:
+                  "nextPageToken,files(id,name,mimeType,parents,createdTime,modifiedTime)",
+              };
+
+              if (pageToken) {
+                params.pageToken = pageToken;
+              }
+
+              const response = execGwsJson([
+                "drive",
+                "files",
+                "list",
+                "--params",
+                JSON.stringify(params),
+                "--format",
+                "json",
+              ]);
+
+              files.push(...(response.files || []));
+              pageToken = response.nextPageToken;
+            } while (pageToken);
+
+            return files;
+          };
+
+          const resolveFolderId = (name) => {
+            const files = listByQuery(
+              `name = '${name}' and mimeType = '${folderMime}' and trashed = false`,
+            );
+
+            if (files.length !== 1) {
+              throw new Error(
+                `Expected exactly 1 Drive folder named "${name}", found ${files.length}.`,
+              );
+            }
+
+            return files[0].id;
+          };
+
+          const ensureDir = (directoryPath) => {
+            fs.mkdirSync(directoryPath, { recursive: true });
+          };
+
+          const downloads = [];
+
+          const downloadFile = (file, relativeParts, fallbackParentId) => {
+            let localName = sanitizeSegment(file.name);
+            let storedMimeType = file.mimeType;
+            let downloadedWith = "get";
+            let exportMimeType = null;
+
+            if (exportMap[file.mimeType]) {
+              downloadedWith = "export";
+              exportMimeType = exportMap[file.mimeType].mimeType;
+              storedMimeType = exportMimeType;
+
+              if (!path.extname(localName)) {
+                localName = `${localName}${exportMap[file.mimeType].extension}`;
+              }
+            } else if (file.mimeType.startsWith("application/vnd.google-apps")) {
+              throw new Error(
+                `Unsupported native Google Workspace file type for ${file.name}: ${file.mimeType}`,
+              );
+            }
+
+            const localRelativePath = [...relativeParts, localName].join("/");
+            const localPath = path.join(tempDir, ...relativeParts, localName);
+            ensureDir(path.dirname(localPath));
+
+            if (downloadedWith === "export") {
+              execGwsBinary([
+                "drive",
+                "files",
+                "export",
+                "--params",
+                JSON.stringify({
+                  fileId: file.id,
+                  mimeType: exportMimeType,
+                }),
+                "--output",
+                localPath,
+              ]);
+            } else {
+              execGwsBinary([
+                "drive",
+                "files",
+                "get",
+                "--params",
+                JSON.stringify({
+                  fileId: file.id,
+                  alt: "media",
+                  supportsAllDrives: true,
+                }),
+                "--output",
+                localPath,
+              ]);
+            }
+
+            downloads.push({
+              driveFileId: file.id,
+              filename: file.name,
+              localRelativePath,
+              localPath,
+              mimeType: storedMimeType,
+              originalMimeType: file.mimeType,
+              downloadedWith,
+              exportMimeType,
+              sourceParentId: (file.parents && file.parents[0]) || fallbackParentId,
+              sourceParentIds: file.parents || [fallbackParentId],
+              createdTime: file.createdTime || null,
+              modifiedTime: file.modifiedTime || null,
+            });
+
+            console.log(`Downloaded ${file.name} to ${localRelativePath}`);
+          };
+
+          const walkFolder = (folderId, relativeParts = []) => {
+            const children = listByQuery(`'${folderId}' in parents and trashed = false`)
+              .sort((left, right) => left.name.localeCompare(right.name));
+
+            for (const child of children) {
+              if (child.mimeType === folderMime) {
+                walkFolder(child.id, [...relativeParts, sanitizeSegment(child.name)]);
+                continue;
+              }
+
+              downloadFile(child, relativeParts, folderId);
+            }
+          };
+
+          const updatesFolderId = resolveFolderId(updatesFolderName);
+          const processedFolderId = resolveFolderId(processedFolderName);
+          walkFolder(updatesFolderId);
+
+          const manifest = {
+            updatesFolderId,
+            processedFolderId,
+            syncedAt: new Date().toISOString(),
+            files: downloads,
+          };
+
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+          console.log(`Wrote manifest to ${manifestPath}`);
+          NODE
+
+          FILE_COUNT=$(node -e "const fs = require('fs'); const manifest = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); process.stdout.write(String((manifest.files || []).length));" "${TEMP_MEDIA_DIR}/manifest.json")
+          echo "manifest_path=${TEMP_MEDIA_DIR}/manifest.json" >> "$GITHUB_OUTPUT"
+          echo "file_count=${FILE_COUNT}" >> "$GITHUB_OUTPUT"
+
+          if [ "${FILE_COUNT}" -gt 0 ]; then
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Successfully downloaded ${FILE_COUNT} files to ./temp_media" | tee -a "${SYNC_LOG_PATH}"
+
+      - name: No new Drive files found
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files != 'true'
+        run: echo "No new files found in Site_Updates. Skipping Gemini, build, and cleanup steps."
+
+      - name: Process downloaded files with Gemini
+        id: process-media
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true'
+        continue-on-error: true
         env:
-          GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          : > "${PROCESS_LOG_PATH}"
+          echo "Starting Gemini processing..." | tee -a "${PROCESS_LOG_PATH}"
+          node scripts/process_media.js 2>&1 | tee -a "${PROCESS_LOG_PATH}"
+          echo "Finished Gemini processing." | tee -a "${PROCESS_LOG_PATH}"
+
+      - name: Build updated site
+        id: site-build
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          : > "${BUILD_LOG_PATH}"
+          echo "Starting site build..." | tee -a "${BUILD_LOG_PATH}"
+          npm run build 2>&1 | tee -a "${BUILD_LOG_PATH}"
+          echo "Build passed!" | tee -a "${BUILD_LOG_PATH}"
+
+      - name: Commit and push generated updates
+        id: commit-push
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          : > "${COMMIT_LOG_PATH}"
+          echo "Starting commit and push..." | tee -a "${COMMIT_LOG_PATH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No repository changes were produced." | tee -a "${COMMIT_LOG_PATH}"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "Automated site sync from Google Drive" 2>&1 | tee -a "${COMMIT_LOG_PATH}"
+          git push origin HEAD:main 2>&1 | tee -a "${COMMIT_LOG_PATH}"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "Successfully pushed changes to main." | tee -a "${COMMIT_LOG_PATH}"
+
+      - name: Move processed Drive files
+        id: move-processed
+        if: steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          : > "${MOVE_LOG_PATH}"
+          echo "Starting Drive cleanup..." | tee -a "${MOVE_LOG_PATH}"
+
+          node <<'NODE' 2>&1 | tee -a "${MOVE_LOG_PATH}"
+          const { execFileSync } = require("node:child_process");
+          const fs = require("node:fs");
+
+          const manifest = JSON.parse(
+            fs.readFileSync(process.env.MANIFEST_PATH, "utf8"),
+          );
+
+          for (const file of manifest.files || []) {
+            const removeParents = (file.sourceParentIds || []).filter(
+              (parentId) => parentId && parentId !== manifest.processedFolderId,
+            );
+
+            const params = {
+              fileId: file.driveFileId,
+              addParents: manifest.processedFolderId,
+              supportsAllDrives: true,
+            };
+
+            if (removeParents.length > 0) {
+              params.removeParents = removeParents.join(",");
+            }
+
+            execFileSync(
+              "gws",
+              [
+                "drive",
+                "files",
+                "update",
+                "--params",
+                JSON.stringify(params),
+                "--json",
+                "{}",
+                "--format",
+                "json",
+              ],
+              { stdio: "inherit" },
+            );
+
+            console.log(
+              `Moved ${file.filename} to Site_Updates_Processed (${manifest.processedFolderId})`,
+            );
+          }
+          NODE
+        env:
+          MANIFEST_PATH: ${{ steps.drive-sync.outputs.manifest_path }}
+
+      - name: Revert generated changes on failure
+        if: always() && steps.drive-sync.outputs.has_files == 'true' && (steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.move-processed.outcome == 'failure')
+        run: |
+          echo "Build failed! Reverting..."
+          git reset --hard "${{ steps.checkout-head.outputs.sha }}"
+
+      - name: Send Telegram success notification
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && steps.drive-sync.outcome == 'success' && steps.drive-sync.outputs.has_files == 'true' && steps.process-media.outcome == 'success' && steps.site-build.outcome == 'success' && steps.commit-push.outcome == 'success' && steps.move-processed.outcome == 'success'
+        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MANIFEST_PATH: ${{ steps.drive-sync.outputs.manifest_path }}
+          COMMITTED: ${{ steps.commit-push.outputs.committed }}
+        run: |
+          set -euo pipefail
+          SUMMARY_JSON=$(node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
 
-      - name: No updates found
-        if: steps.check_files.outputs.found_count == 0
-        run: echo "No new files found in Google Drive. Skipping AI sync to save quota."
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST_PATH, "utf8"));
+          const resultsPath = path.join(path.dirname(process.env.MANIFEST_PATH), "process-results.json");
+          const results = fs.existsSync(resultsPath)
+            ? JSON.parse(fs.readFileSync(resultsPath, "utf8"))
+            : { appended: [], skipped: [] };
+
+          process.stdout.write(JSON.stringify({
+            fileCount: (manifest.files || []).length,
+            appendedCount: (results.appended || []).length,
+            skippedCount: (results.skipped || []).length,
+          }));
+          NODE
+          )
+
+          FILE_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.fileCount));")
+          APPENDED_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.appendedCount));")
+          SKIPPED_COUNT=$(printf '%s' "${SUMMARY_JSON}" | node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(0, 'utf8')); process.stdout.write(String(data.skippedCount));")
+
+          MESSAGE="Drive-to-Site Sync complete. Downloaded ${FILE_COUNT} files, appended ${APPENDED_COUNT} updates, skipped ${SKIPPED_COUNT} duplicates, build passed, and archived processed Drive files."
+
+          if [ "${COMMITTED}" = "true" ]; then
+            MESSAGE="${MESSAGE} Changes were pushed to main."
+          else
+            MESSAGE="${MESSAGE} No repository diff was created."
+          fi
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${MESSAGE}"
+
+      - name: Send Telegram failure notification
+        if: always() && steps.input-check.outputs.telegram_configured == 'true' && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.move-processed.outcome == 'failure')
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          FAILED_STAGE="workflow"
+          LOG_PATH=""
+
+          if [ "${{ steps.drive-sync.outcome }}" = "failure" ]; then
+            FAILED_STAGE="drive sync"
+            LOG_PATH="${SYNC_LOG_PATH}"
+          elif [ "${{ steps.process-media.outcome }}" = "failure" ]; then
+            FAILED_STAGE="Gemini processing"
+            LOG_PATH="${PROCESS_LOG_PATH}"
+          elif [ "${{ steps.site-build.outcome }}" = "failure" ]; then
+            FAILED_STAGE="build"
+            LOG_PATH="${BUILD_LOG_PATH}"
+          elif [ "${{ steps.commit-push.outcome }}" = "failure" ]; then
+            FAILED_STAGE="commit/push"
+            LOG_PATH="${COMMIT_LOG_PATH}"
+          elif [ "${{ steps.move-processed.outcome }}" = "failure" ]; then
+            FAILED_STAGE="Drive cleanup"
+            LOG_PATH="${MOVE_LOG_PATH}"
+          fi
+
+          LOG_EXCERPT="No error log was captured."
+          if [ -n "${LOG_PATH}" ] && [ -f "${LOG_PATH}" ]; then
+            LOG_EXCERPT=$(tail -n 20 "${LOG_PATH}")
+          fi
+
+          MESSAGE="Drive-to-Site Sync failed during ${FAILED_STAGE}.\n\n${LOG_EXCERPT}"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${MESSAGE}"
+
+      - name: Exit workflow on failure
+        if: always() && (steps.drive-sync.outcome == 'failure' || steps.process-media.outcome == 'failure' || steps.site-build.outcome == 'failure' || steps.commit-push.outcome == 'failure' || steps.move-processed.outcome == 'failure')
+        run: exit 1
