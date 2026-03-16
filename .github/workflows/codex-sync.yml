@@ -12,9 +12,7 @@ jobs:
       pull-requests: write
     env:
       GEMINI_MODEL: "gemini-2.5-flash-lite"
-      GWS_CLI_PACKAGE: "@googleworkspace/cli"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-      GEMINI_QUOTA_STATE_DIR: "${{ github.workspace }}/.gemini-quota-state"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -27,327 +25,47 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
-      - name: Restore Gemini quota guard state
-        id: gemini-quota-cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.gemini-quota-state
-          key: gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-${{ github.workflow }}
-          restore-keys: |
-            gemini-quota-guard-${{ github.repository }}-${{ github.ref }}-
-
-      - name: Check Gemini daily quota guard
-        id: gemini-quota-check
-        run: |
-          set -euo pipefail
-          mkdir -p "${GEMINI_QUOTA_STATE_DIR}"
-          QUOTA_FILE="${GEMINI_QUOTA_STATE_DIR}/blocked_until"
-          REASON_FILE="${GEMINI_QUOTA_STATE_DIR}/reason"
-          DEFAULT_WINDOW_SECONDS=86400
-
-          if [ -f "$QUOTA_FILE" ]; then
-            BLOCK_UNTIL="$(cat "$QUOTA_FILE")"
-            NOW="$(date +%s)"
-            if [ "$NOW" -lt "$BLOCK_UNTIL" ]; then
-              LAST_FAIL="$(cat "$REASON_FILE" 2>/dev/null || echo "quota or API availability issue")"
-              REMAINING=$((BLOCK_UNTIL - NOW))
-              echo "quota_guard=true" >> "$GITHUB_OUTPUT"
-              echo "quota_reason=$LAST_FAIL" >> "$GITHUB_OUTPUT"
-              echo "quota_wait_seconds=$REMAINING" >> "$GITHUB_OUTPUT"
-              echo "::warning::Gemini quota guard is active for this run. Remaining cooldown: ${REMAINING}s. Reason: ${LAST_FAIL}"
-              exit 0
-            fi
-          fi
-
-          echo "quota_guard=false" >> "$GITHUB_OUTPUT"
-          echo "quota_reason=" >> "$GITHUB_OUTPUT"
-          echo "quota_wait_seconds=0" >> "$GITHUB_OUTPUT"
-
-      - name: Notify quota guard active
-        if: steps.gemini-quota-check.outputs.quota_guard == 'true'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          QUOTA_SECONDS="${{ steps.gemini-quota-check.outputs.quota_wait_seconds }}"
-          WAIT_HOURS=$(( QUOTA_SECONDS / 3600 ))
-          WAIT_MINUTES=$(( (QUOTA_SECONDS % 3600) / 60 ))
-          WAIT_SECONDS=$(( QUOTA_SECONDS % 60 ))
-          if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -d chat_id="${TELEGRAM_CHAT_ID}" \
-              -d text="Drive-to-Site Sync skipped due quota guard: ${{ steps.gemini-quota-check.outputs.quota_reason }}. Try again in ${WAIT_HOURS}h ${WAIT_MINUTES}m ${WAIT_SECONDS}s."
-          else
-            echo "::warning::Telegram credentials are not configured; skip notification not sent."
-          fi
-
-      - name: Check critical workflow inputs
-        id: input-check
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          set -euo pipefail
-
-          # GEMINI_API_KEY is required for the run-gemini-cli action.
-          if [ -z "${GEMINI_API_KEY:-}" ]; then
-            echo "::error::Missing secret: GEMINI_API_KEY"
-            exit 1
-          fi
-
-          # Capture optional notification state for clearer failure context.
-          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-            echo "telegram_configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "telegram_configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured; Telegram notifications will be skipped."
-          fi
-
       - name: Create Gemini config directory
         run: mkdir -p ~/.gemini
 
       - name: Install dependencies
         run: |
-          set -euo pipefail
           npm install
 
-      - name: Create fallback .geminiignore
+      - name: Check for new Drive files (Efficient Step)
+        id: check_files
         run: |
-          if [ ! -f .geminiignore ]; then
-            printf '%s\n' \
-              ".next" \
-              "node_modules" \
-              ".gemini" \
-              ".next/cache" \
-              ".next/static" \
-              ".cache" > .geminiignore
-          fi
-
-      - name: Verify project instructions exist
-        run: |
-          if [ ! -f GEMINI.md ]; then
-            echo "::error::Missing GEMINI.md in repository root. Gemini agent prompt depends on this file."
-            exit 1
-          fi
-          if ! grep -qiE "drive-to-site sync|\\bgws\\b|telegram" GEMINI.md; then
-            echo "::warning::GEMINI.md does not contain expected routine keywords. The Gemini prompt may not execute as expected."
-          fi
-
-      - name: Install Google Workspace CLI
-        id: gws-install
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-
-          INSTALL_LOG="${RUNNER_TEMP}/gws-install.log"
-          : > "$INSTALL_LOG"
-
-          npm install --silent --no-audit --prefer-offline --global "${GWS_CLI_PACKAGE}" 2>&1 | tee -a "$INSTALL_LOG" \
-            || npm install --silent --no-audit --prefer-offline --global gws 2>&1 | tee -a "$INSTALL_LOG" \
-            || true
-
-          if command -v gws >/dev/null 2>&1; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            gws --version
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            INSTALL_ERR="$(sed -n '1,30p' "$INSTALL_LOG" | tr -d '\n' | sed 's/|/\\|/g' | sed 's/\"/\\"/g')"
-            echo "install_error=$INSTALL_ERR" >> "$GITHUB_OUTPUT"
-            echo "::error title=Google Workspace CLI missing::Could not install gws. See install_error output above."
-          fi
-
-      - name: Detect Google Workspace query flag
-        id: gws-query
-        if: steps.gws-install.outputs.available == 'true'
-        run: |
-          set -euo pipefail
-          if gws drive files list --help | grep -q -- "--q"; then
-            echo "query_flag=--q" >> "$GITHUB_OUTPUT"
-          elif gws drive files list --help | grep -q -- "--query"; then
-            echo "query_flag=--query" >> "$GITHUB_OUTPUT"
-          else
-            echo "query_flag=--query" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Notify skip due to missing Google Workspace CLI
-        if: steps.gws-install.outputs.available != 'true'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -d chat_id="${TELEGRAM_CHAT_ID}" \
-              -d text="Drive-to-Site Sync skipped: Google Workspace CLI (gws) is unavailable on this runner. Install or configure gws in this workflow."
-          else
-            echo "::warning::Telegram credentials are not configured; skip notification not sent."
-          fi
-
-      - name: Ensure Google Workspace credentials are configured
-        id: gws-creds-check
-        if: steps.gws-install.outputs.available == 'true'
+          # Use gws to list files directly in bash (Zero AI Cost)
+          FILES=$(gws drive list --query "name contains 'Site_Updates'" --output json | jq -r '.[0].id' | xargs -I {} gws drive list --query "'{}' in parents" --output json)
+          COUNT=$(echo "$FILES" | jq '. | length')
+          echo "found_count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "file_list<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$FILES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
         env:
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          set -euo pipefail
 
-          if [ -z "${GWS_CREDENTIALS:-}" ]; then
-            if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
-              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                -d chat_id="${TELEGRAM_CHAT_ID}" \
-                -d text="Drive-to-Site Sync failed to start: GWS_CREDENTIALS is missing. Add Google Workspace credentials and rerun."
-            else
-              echo "::warning::Telegram credentials are not configured; cannot send credential-missing notification."
-            fi
-
-            echo "::error::Missing secret: GWS_CREDENTIALS"
-            echo "has_creds=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          # Accept raw JSON or base64-encoded credentials.
-          CRED_FILE="${RUNNER_TEMP}/gws-credentials.json"
-          if [[ "${GWS_CREDENTIALS}" == "{"* ]]; then
-            printf '%s' "${GWS_CREDENTIALS}" > "${CRED_FILE}"
-          else
-            printf '%s' "${GWS_CREDENTIALS}" | base64 --decode > "${CRED_FILE}" || {
-              echo "::error::GWS_CREDENTIALS is not valid base64-encoded JSON."
-              exit 1
-            }
-          fi
-
-          if [ ! -s "$CRED_FILE" ]; then
-            echo "::error::Resolved credential file is empty."
-            exit 1
-          fi
-
-          # Validate parseable JSON when possible.
-          if ! node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));" "$CRED_FILE"; then
-            echo "::error::GWS_CREDENTIALS is not valid JSON after decode."
-            exit 1
-          fi
-
-          chmod 600 "$CRED_FILE"
-          echo "gws_credentials_file=${CRED_FILE}" >> "$GITHUB_OUTPUT"
-          echo "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=${CRED_FILE}" >> "$GITHUB_ENV"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=${CRED_FILE}" >> "$GITHUB_ENV"
-          echo "has_creds=true" >> "$GITHUB_OUTPUT"
-
-      - name: Verify Google Workspace CLI
-        if: steps.gws-creds-check.outputs.has_creds == 'true'
-        run: |
-          set -euo pipefail
-
-          if ! gws --help > /dev/null 2>&1; then
-            echo "::error::`gws` is installed but failed to execute."
-            exit 1
-          fi
-
-          gws --version
-
-      - name: Validate Google Workspace auth
-        if: steps.gws-creds-check.outputs.has_creds == 'true'
-        run: |
-          set -euo pipefail
-          AUTH_LOG="${RUNNER_TEMP}/gws-auth.log"
-
-          if gws auth status > "$AUTH_LOG" 2>&1; then
-            echo "auth=true" >> "$GITHUB_OUTPUT"
-            echo "gws auth check passed."
-          else
-            echo "auth=false" >> "$GITHUB_OUTPUT"
-            echo "::error::gws could not authenticate with GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE."
-            AUTH_ERR="$(sed -n '1,40p' "$AUTH_LOG" | tr -d '\n' | sed 's/|/\\|/g' | sed 's/\"/\\"/g')"
-            echo "auth_error=$AUTH_ERR" >> "$GITHUB_OUTPUT"
-            cat "$AUTH_LOG"
-            exit 1
-          fi
-
-      - name: Run Gemini Agent
-        id: gemini-run
-        if: steps.gws-creds-check.outputs.has_creds == 'true' && steps.gemini-quota-check.outputs.quota_guard != 'true'
-        continue-on-error: true
+      - name: Run Gemini Agent (Only if files exist)
+        if: steps.check_files.outputs.found_count > 0
         uses: google-github-actions/run-gemini-cli@v0.1.20
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: "gemini-2.5-flash-lite"
           gemini_debug: false
           prompt: |
-            Execute the 'Drive-to-Site Sync' routine as described in GEMINI.md.
+            New media detected in Google Drive:
+            ${{ steps.check_files.outputs.file_list }}
 
-            1. Sync all new content from the Google Drive 'Site_Updates' folder.
-            2. For every new image or video, use your vision capabilities to analyze the content, determine its proper categorization (Squash, Tech, Flight, etc.), and generate SEO-optimized alt text and metadata.
-            3. Autonomously identify and update all necessary data files and pages within the codebase to integrate this new content, ensuring strict TypeScript consistency and following existing architectural patterns.
-            4. For Drive operations, use Google Workspace CLI `gws` with only supported arguments.
-               - Use this verified query flag from this runner: `${{ steps.gws-query.outputs.query_flag }}`.
-               - First, resolve the Drive folder ID (without using `--folder-path`) and use parent filtering.
-               - Use one of these equivalent query flags depending on your `gws` version: `--query` or `--q`.
-
-               Example flow:
-
-               1) Detect query flag:
-                  `QUERY_FLAG='--query'`
-                  `if gws drive files list --help | grep -q -- "--q"; then QUERY_FLAG='--q'; fi`
-
-               2) Find folder ID:
-                  `SITE_ID=$(gws drive files list ${QUERY_FLAG} "name = 'Site_Updates' and mimeType = 'application/vnd.google-apps.folder' and trashed = false" --fields "files(id,name)" --format json | jq -r '.files[0].id')`
-
-               3) List files in folder:
-                  `gws drive files list ${QUERY_FLAG} "'$SITE_ID' in parents and trashed = false" --fields "files(id,name,mimeType,size)" --format json`
-
-               4) Download media/text:
-                  `gws drive files get <FILE_ID> --output temp_updates/<NAME>`.
-
-               5) After successful sync, optionally remove processed source files with:
-                  `gws drive files delete <FILE_ID>`.
-
-            5. Notify me of the results:
-                - If the 'Telegram Messaging' skill is available, use it.
-                - Otherwise, use 'run_shell_command' to curl the Telegram Bot API:
-                  curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-                  -d chat_id="$TELEGRAM_CHAT_ID" \
-                  -d text="Sync Complete: Updated site with new analyzed media."
+            1. Download these files using 'gws drive download'.
+            2. Use your vision capabilities to analyze them and determine their categorization.
+            3. Autonomously update the relevant data files (media.ts, timeline.ts, etc.) to integrate them.
+            4. Notify me via Telegram ($TELEGRAM_CHAT_ID) that the sync is complete.
         env:
-          GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.gws-creds-check.outputs.gws_credentials_file }}
           GWS_CREDENTIALS: ${{ secrets.GWS_CREDENTIALS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
-      - name: Notify on workflow failure
-        if: always() && (steps.gws-install.outcome == 'failure' || steps.gws-creds-check.outcome == 'failure' || steps.gemini-run.outcome == 'failure' || failure())
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ "${{ steps.input-check.outputs.telegram_configured }}" = "true" ]; then
-            FAIL_REASON="Workflow failed. Check logs for step outputs:"
-            if [ "${{ steps.gemini-run.outcome }}" = "failure" ]; then
-              FAIL_REASON="$FAIL_REASON Gemini action failed (likely quota/auth/CLI response issues)."
-            fi
-            if [ "${{ steps.gws-install.outcome }}" = "success" ] && [ "${{ steps.gws-install.outputs.available }}" != "true" ]; then
-              FAIL_REASON="$FAIL_REASON gws unavailable."
-            elif [ "${{ steps.gws-creds-check.outcome }}" != "success" ]; then
-              FAIL_REASON="$FAIL_REASON GWS credential check failed."
-            elif [ "${{ steps.gemini-run.outcome }}" != "success" ]; then
-              FAIL_REASON="$FAIL_REASON Gemini action failed."
-            fi
-
-            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              -d chat_id="${TELEGRAM_CHAT_ID}" \
-              -d text="$FAIL_REASON"
-          else
-            echo "::warning::Telegram credentials are not configured; cannot send failure notification."
-          fi
-
-      - name: Record Gemini quota guard marker
-        if: always() && steps.gemini-run.outcome == 'failure'
-        run: |
-          mkdir -p "${GEMINI_QUOTA_STATE_DIR}"
-          BLOCK_UNTIL=$(( $(date +%s) + 86400 ))
-          echo "$BLOCK_UNTIL" > "${GEMINI_QUOTA_STATE_DIR}/blocked_until"
-          printf "Gemini run failed with quota/API issue or runtime CLI error" > "${GEMINI_QUOTA_STATE_DIR}/reason"
+      - name: No updates found
+        if: steps.check_files.outputs.found_count == 0
+        run: echo "No new files found in Google Drive. Skipping AI sync to save quota."
