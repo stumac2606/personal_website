@@ -375,16 +375,18 @@ function MediaRail({
                     )}
                   </div>
 
-                  <figcaption className="mt-3 grid gap-2">
+                  <figcaption className="mt-4 grid max-w-[32ch] gap-2 border-l border-border pl-4">
                     <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.32em] text-muted">
                       <span className="font-mono">{section.label}</span>
                       <span>{item.type === "video" ? "Video" : "Image"}</span>
                     </div>
-                    <p className="text-base font-semibold text-foreground">
+                    <p className="max-w-[24ch] text-base font-semibold leading-snug text-foreground">
                       {item.title}
                     </p>
                     {item.caption ? (
-                      <p className="text-sm text-muted">{item.caption}</p>
+                      <p className="max-w-[30ch] text-sm leading-6 text-muted">
+                        {item.caption}
+                      </p>
                     ) : null}
                   </figcaption>
                 </figure>

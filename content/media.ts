@@ -176,8 +176,7 @@ export const media: MediaItem[] = [
     title: "VentureFest pitch",
     alt: "Stuart pitching Motion Dynamics on stage at VentureFest 2026.",
     section: "Tech",
-    caption:
-      "Pitched how we turn movement footage into clearer coaching decisions.",
+    caption: "Pitched how we turn movement footage into clearer coaching decisions.",
     sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
     sourceDate: "2026-03-16",
     sourceMimeType: "image/jpeg",
@@ -189,7 +188,7 @@ export const media: MediaItem[] = [
     title: "VentureFest team photo",
     alt: "Motion Dynamics team after the VentureFest 2026 pitch.",
     section: "Tech",
-    caption: "A quick team moment after the pitch and demo.",
+    caption: "A quick team photo after the pitch.",
     sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
     sourceDate: "2026-03-16",
     sourceMimeType: "image/jpeg",
