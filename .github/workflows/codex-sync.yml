@@ -13,11 +13,12 @@ jobs:
       GEMINI_MODEL: "gemini-2.5-flash-lite"
       GWS_CLI_PACKAGE: "@googleworkspace/cli"
       TEMP_MEDIA_DIR: "${{ github.workspace }}/temp_media"
-      SYNC_LOG_PATH: "${{ runner.temp }}/drive-sync.log"
-      PROCESS_LOG_PATH: "${{ runner.temp }}/process-media.log"
-      BUILD_LOG_PATH: "${{ runner.temp }}/build.log"
-      COMMIT_LOG_PATH: "${{ runner.temp }}/commit-push.log"
-      MOVE_LOG_PATH: "${{ runner.temp }}/drive-move.log"
+      LOG_DIR: "${{ github.workspace }}/.sync-logs"
+      SYNC_LOG_PATH: "${{ github.workspace }}/.sync-logs/drive-sync.log"
+      PROCESS_LOG_PATH: "${{ github.workspace }}/.sync-logs/process-media.log"
+      BUILD_LOG_PATH: "${{ github.workspace }}/.sync-logs/build.log"
+      COMMIT_LOG_PATH: "${{ github.workspace }}/.sync-logs/commit-push.log"
+      MOVE_LOG_PATH: "${{ github.workspace }}/.sync-logs/drive-move.log"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -66,6 +67,7 @@ jobs:
       - name: Install dependencies
         run: |
           set -euo pipefail
+          mkdir -p "${LOG_DIR}"
           npm install
 
       - name: Install Google Workspace CLI
