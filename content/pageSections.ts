@@ -22,4 +22,12 @@ export const dynamicPageSections: DynamicPageSection[] = [
     intro: "Product demos, technical milestones, and commercial proof points.",
     order: 10,
   },
+  {
+    page: "work",
+    key: "golf-analysis",
+    title: "Golf Analysis",
+    intro:
+      "We apply our movement-analysis approach to golf, turning swing footage into coach-ready feedback.",
+    order: 20,
+  },
 ];

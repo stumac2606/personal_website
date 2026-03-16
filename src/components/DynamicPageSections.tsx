@@ -19,8 +19,31 @@ export default function DynamicPageSections({
   page,
   eyebrow,
 }: DynamicPageSectionsProps) {
-  const sections = dynamicPageSections
-    .filter((section) => section.page === page)
+  const discoveredSections = new Map(
+    dynamicPageSections
+      .filter((section) => section.page === page)
+      .map((section) => [section.key, section]),
+  );
+
+  for (const item of [...highlights, ...media, ...timeline]) {
+    if (
+      item.pageKey !== page ||
+      !item.pageSectionKey ||
+      discoveredSections.has(item.pageSectionKey)
+    ) {
+      continue;
+    }
+
+    discoveredSections.set(item.pageSectionKey, {
+      page,
+      key: item.pageSectionKey,
+      title: item.pageSectionTitle || humanizeSectionKey(item.pageSectionKey),
+      intro: item.pageSectionIntro,
+      order: 90,
+    });
+  }
+
+  const sections = [...discoveredSections.values()]
     .map((section) => {
       const sectionHighlights = highlights.filter(
         (item) => item.pageKey === page && item.pageSectionKey === section.key,
@@ -38,6 +61,17 @@ export default function DynamicPageSections({
 
       return {
         ...section,
+        title:
+          section.title ||
+          sectionHighlights[0]?.pageSectionTitle ||
+          sectionMedia[0]?.pageSectionTitle ||
+          sectionTimeline[0]?.pageSectionTitle ||
+          humanizeSectionKey(section.key),
+        intro:
+          section.intro ||
+          sectionHighlights[0]?.pageSectionIntro ||
+          sectionMedia[0]?.pageSectionIntro ||
+          sectionTimeline[0]?.pageSectionIntro,
         highlights: sectionHighlights,
         media: sectionMedia,
         timeline: sectionTimeline,
@@ -124,4 +158,12 @@ export default function DynamicPageSections({
       ))}
     </>
   );
+}
+
+function humanizeSectionKey(value: string) {
+  return value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
