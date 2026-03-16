@@ -75,4 +75,22 @@ export const timeline: TimelineItem[] = [
     title: "Flight Level 1",
     description: "Precision, judgement, and flow in the air.",
   },
+  {
+    year: "2026",
+    area: "Life events",
+    title: "4c7e6c7d 558a 4a16 Be6a 1f977b9bb759",
+    meta: "2026-03-16",
+    description: "VentureFest 2026 saw the PitchUp competition, a key performance indicator for emerging ventures. Motion Dynamics presented their core value proposition, demonstrating their system for improving human movement.",
+    sourceFilename: "4c7e6c7d-558a-4a16-be6a-1f977b9bb759.jpg",
+    sourceDate: "2026-03-16",
+  },
+  {
+    year: "2026",
+    area: "Life events",
+    title: "6cd19684 2df2 4516 9ef5 0fb096a5b283",
+    meta: "2026-03-16",
+    description: "The Motion Dynamics team convened at VentureFest 2026, marking a milestone in their outreach and networking strategy. The event provided a platform for showcasing their precision engineering approach to biomechanics.",
+    sourceFilename: "6cd19684-2df2-4516-9ef5-0fb096a5b283.jpg",
+    sourceDate: "2026-03-16",
+  },
 ];
