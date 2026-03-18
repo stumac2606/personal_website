@@ -30,4 +30,11 @@ export const dynamicPageSections: DynamicPageSection[] = [
       "We apply our movement-analysis approach to golf, turning swing footage into coach-ready feedback.",
     order: 20,
   },
+  {
+    page: "snowboard",
+    key: "snowboarding-performance",
+    title: "Snowboarding",
+    intro: "Analysis and insights from snowboarding performance.",
+    order: 50,
+  },
 ];

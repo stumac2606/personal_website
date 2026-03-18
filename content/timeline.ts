@@ -111,4 +111,18 @@ export const timeline: TimelineItem[] = [
     sourceDate: "2026-02-03",
     sourceFolder: "PGA - Golf analysis",
   },
+  {
+    year: "2026",
+    area: "Snowboarding",
+    title: "Snowboarding Tree Ride",
+    meta: "2026-03-16",
+    description: "Executing a controlled descent through a natural tree line.",
+    pageKey: "snowboard",
+    pageSectionKey: "snowboarding-performance",
+    pageSectionTitle: "Snowboarding",
+    pageSectionIntro: "Analysis and insights from snowboarding performance.",
+    sourceFilename: "Tree_ride.MOV",
+    sourceDate: "2026-03-16",
+    sourceFolder: "Snowboarding",
+  },
 ];

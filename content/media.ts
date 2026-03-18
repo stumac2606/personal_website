@@ -294,6 +294,22 @@ export const media: MediaItem[] = [
     sourceDate: "2026-03-16",
     sourceMimeType: "video/quicktime",
   },
+  {
+    id: "tree-ride-2026-03-16",
+    type: "video",
+    src: "/media/videos/tree-ride-2026-03-16.mov",
+    title: "Snowboarding Tree Ride",
+    alt: "Snowboarder navigating a tree run.",
+    section: "Snowboard",
+    pageKey: "snowboard",
+    pageSectionKey: "snowboarding-performance",
+    pageSectionTitle: "Snowboarding",
+    pageSectionIntro: "Analysis and insights from snowboarding performance.",
+    caption: "Executing a controlled descent through a natural tree line.",
+    sourceFilename: "Tree_ride.MOV",
+    sourceDate: "2026-03-16",
+    sourceMimeType: "video/quicktime",
+  },
 ];
 
 export const mediaFilters: Array<{
