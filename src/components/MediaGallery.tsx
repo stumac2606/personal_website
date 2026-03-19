@@ -49,6 +49,8 @@ export default function MediaGallery({
   const [activeFilter, setActiveFilter] = useState<MediaFilterId>(
     filters[0]?.id ?? "all",
   );
+  const showFilterControls =
+    filters.filter((filter) => filter.id !== "all").length > 1;
 
   const setRatio = (id: string, ratio: number) => {
     setRatios((prev) => {
@@ -82,32 +84,34 @@ export default function MediaGallery({
 
   return (
     <div className="grid min-w-0 gap-12">
-      <div className="flex flex-wrap items-center gap-4 border-y border-border py-3 text-xs uppercase tracking-[0.32em] text-muted">
-        <span className="font-mono">{filterLabel}</span>
-        <div className="flex flex-wrap gap-4">
-          {filters.map((filter) => {
-            const isActive = filter.id === activeFilter;
-            return (
-              <button
-                key={filter.id}
-                type="button"
-                onClick={() => setActiveFilter(filter.id)}
-                className={`relative pb-1 text-xs uppercase tracking-[0.32em] transition-colors ${
-                  isActive ? "text-foreground" : "text-muted"
-                }`}
-                aria-pressed={isActive}
-              >
-                <span>{filter.label}</span>
-                <span
-                  className={`absolute bottom-0 left-0 h-[1px] w-full bg-accent transition-transform duration-200 ${
-                    isActive ? "scale-x-100" : "scale-x-0"
+      {showFilterControls ? (
+        <div className="flex flex-wrap items-center gap-4 border-y border-border py-3 text-xs uppercase tracking-[0.32em] text-muted">
+          <span className="font-mono">{filterLabel}</span>
+          <div className="flex flex-wrap gap-4">
+            {filters.map((filter) => {
+              const isActive = filter.id === activeFilter;
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`relative pb-1 text-xs uppercase tracking-[0.32em] transition-colors ${
+                    isActive ? "text-foreground" : "text-muted"
                   }`}
-                />
-              </button>
-            );
-          })}
+                  aria-pressed={isActive}
+                >
+                  <span>{filter.label}</span>
+                  <span
+                    className={`absolute bottom-0 left-0 h-[1px] w-full bg-accent transition-transform duration-200 ${
+                      isActive ? "scale-x-100" : "scale-x-0"
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {visibleSections.map((section) => (
         <MediaRail

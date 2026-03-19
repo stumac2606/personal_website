@@ -62,7 +62,20 @@ const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
 const BRAND_GUIDE =
   "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, pitch, product, engineering, or Motion Dynamics content should usually use gallery_section="Tech". If it marks a milestone or event, also use timeline_area="Motion Dynamics". If it should appear on a specific page section, also return page_key, page_section_key, page_section_title, and optional page_section_intro.\n- Use page_key="work" and page_section_key="motion-dynamics" for general company items that do not need a more specific subsection.\n- Use a more specific page_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream.\n- Return page_key="home" when the content should become a homepage section, page_key="sport" for the sport page, page_key="snowboard" for the snowboard page, page_key="about" for the about page, and page_key="contact" only when the content is genuinely about contact, bookings, or availability.\n- Only set feature_on_homepage="yes" when the sidecar note explicitly asks for homepage highlight placement or the source context clearly says it should also be featured on the homepage. Default to "no".\n- When feature_on_homepage="yes", provide homepage_feature_title and homepage_feature_text as a tighter homepage summary than the main page version.\n- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion".\n- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.\n- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.\n- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.\n- For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.\n- When feature_on_homepage="no", return "none" for homepage_feature_title and homepage_feature_text.\n- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "feature_on_homepage": "yes" | "no",\n      "homepage_feature_title": "Short homepage title" | "none",\n      "homepage_feature_text": "Short homepage summary" | "none",\n      "page_key": "home" | "work" | "sport" | "snowboard" | "about" | "contact" | "none",\n      "page_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "page_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "page_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, product, engineering, golf-analysis, or Motion Dynamics content should usually use gallery_section="Tech". Use page_key and page_section_* to place those media items on the work page, even when they do not need any written summary card above the gallery.
+- Only set timeline_area or highlight_area when the upload is clearly a noteworthy milestone, launch, pitch, competition result, award, or event that deserves a separate written summary block. Routine gallery additions should return "none" for both fields.
+- Use page_key="work" and page_section_key="motion-dynamics" for general company items that do not need a more specific subsection.
+- Use a more specific page_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream, but keep timeline_area and highlight_area as "none" unless the source context explicitly justifies a summary card.
+- Return page_key="home" when the content should become a homepage section, page_key="sport" for the sport page, page_key="snowboard" for the snowboard page, page_key="about" for the about page, and page_key="contact" only when the content is genuinely about contact, bookings, or availability.
+- Only set feature_on_homepage="yes" when the sidecar note explicitly asks for homepage highlight placement or the source context clearly says it should also be featured on the homepage. Default to "no".
+- When feature_on_homepage="yes", provide homepage_feature_title and homepage_feature_text as a tighter homepage summary than the main page version.
+- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion" only when they are notable milestones; otherwise return "none" for timeline_area and highlight_area.
+- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.
+- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.
+- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.
+- For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.
+- When feature_on_homepage="no", return "none" for homepage_feature_title and homepage_feature_text.
+- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "feature_on_homepage": "yes" | "no",\n      "homepage_feature_title": "Short homepage title" | "none",\n      "homepage_feature_text": "Short homepage summary" | "none",\n      "page_key": "home" | "work" | "sport" | "snowboard" | "about" | "contact" | "none",\n      "page_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "page_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "page_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -1302,13 +1315,21 @@ function normalizeHomepageFeatureText(value, fallbackText, brandContext, title) 
 }
 
 function inferContextFromPath(file) {
-  const haystack = `${file.localRelativePath || ""} ${file.filename || ""}`.toLowerCase();
+  const haystack = buildContextHaystack(file);
 
-  if (/(venturefest|pitchup|motion dynamics|pitch|startup|business|investor|product|demo|tech|golf analysis|swing analysis)/.test(haystack)) {
+  if (isMotionDynamicsMilestoneContext(file)) {
     return {
       gallerySection: "Tech",
       timelineArea: "Motion Dynamics",
       highlightArea: "Motion Dynamics",
+    };
+  }
+
+  if (isMotionDynamicsContext(file)) {
+    return {
+      gallerySection: "Tech",
+      timelineArea: "none",
+      highlightArea: "none",
     };
   }
 
@@ -1408,6 +1429,10 @@ function resolvePageSectionKey(value, pageKey, sourceFile, gallerySection, highl
   }
 
   if (pageKey === "work") {
+    if (isGolfAnalysisContext(sourceFile)) {
+      return "golf-analysis";
+    }
+
     return "motion-dynamics";
   }
 
@@ -1428,6 +1453,10 @@ function resolvePageSectionTitle(value, pageSectionKey, fallbackTitle) {
     return "Motion Dynamics";
   }
 
+  if (pageSectionKey === "golf-analysis") {
+    return "Golf Analysis";
+  }
+
   return humanizeFilename(pageSectionKey);
 }
 
@@ -1445,9 +1474,36 @@ function resolvePageSectionIntro(value, pageSectionKey, pageSectionTitle, brandC
     return "Product demos, technical milestones, and commercial proof points.";
   }
 
+  if (pageSectionKey === "golf-analysis") {
+    return "We apply our movement-analysis approach to golf, turning swing footage into coach-ready feedback.";
+  }
+
   return brandContext === "company"
     ? `${pageSectionTitle} work, demos, and coaching-facing analysis.`
     : `${pageSectionTitle} updates and supporting media.`;
+}
+
+function buildContextHaystack(file) {
+  return `${file.localRelativePath || ""} ${file.filename || ""}`.toLowerCase();
+}
+
+function isMotionDynamicsMilestoneContext(file) {
+  const haystack = buildContextHaystack(file);
+  return /(venturefest|pitchup|investment forum|competition|conference|summit|demo day|award|winner|finalist|launch event)/.test(
+    haystack,
+  );
+}
+
+function isMotionDynamicsContext(file) {
+  const haystack = buildContextHaystack(file);
+  return /(motion dynamics|sport[- ]?tech|biomech|pose|analysis|golf|swing|serve|product|prototype|tech|startup|business|investor|demo)/.test(
+    haystack,
+  );
+}
+
+function isGolfAnalysisContext(file) {
+  const haystack = buildContextHaystack(file);
+  return /(golf|pga|swing analysis)/.test(haystack);
 }
 
 function slugifyPageSectionKey(value) {
