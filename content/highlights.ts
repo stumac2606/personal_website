@@ -139,23 +139,6 @@ export const highlights: Highlight[] = [
     sourceFilename: "Snowboard_jump.MOV",
     sourceDate: "2026-03-16",
   },
-  {
-    id: "tree-ride-2026-03-16",
-    area: "Snowboarding",
-    title: "Snowboarding Tree Ride",
-    meta: "2026-03-16",
-    description: "Executing a controlled descent through a natural tree line.",
-    date: "2026-03-16",
-    tag: "moment",
-    sourcePlacement: "primary",
-    pageKey: "snowboard",
-    pageSectionKey: "snowboarding-performance",
-    pageSectionTitle: "Snowboarding",
-    pageSectionIntro: "Analysis and insights from snowboarding performance.",
-    sourceFilename: "Tree_ride.MOV",
-    sourceDate: "2026-03-16",
-    sourceFolder: "Snowboarding",
-  },
 ];
 
 export const featuredSection = {

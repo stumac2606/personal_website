@@ -58,7 +58,7 @@ export default function SnowboardPage() {
         className="border-b-0 pb-24"
       >
         <div className="grid gap-6 lg:grid-cols-2">
-          {snowboardClips.slice(0, 2).map((clip) => (
+          {snowboardClips.map((clip) => (
             <figure key={clip.id} className="grid gap-3">
               <div className="relative aspect-[16/9] w-full border border-border bg-highlight">
                 <video

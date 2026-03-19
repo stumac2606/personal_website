@@ -101,18 +101,4 @@ export const timeline: TimelineItem[] = [
     sourceFilename: "Snowboard_jump.MOV",
     sourceDate: "2026-03-16",
   },
-  {
-    year: "2026",
-    area: "Snowboarding",
-    title: "Snowboarding Tree Ride",
-    meta: "2026-03-16",
-    description: "Executing a controlled descent through a natural tree line.",
-    pageKey: "snowboard",
-    pageSectionKey: "snowboarding-performance",
-    pageSectionTitle: "Snowboarding",
-    pageSectionIntro: "Analysis and insights from snowboarding performance.",
-    sourceFilename: "Tree_ride.MOV",
-    sourceDate: "2026-03-16",
-    sourceFolder: "Snowboarding",
-  },
 ];

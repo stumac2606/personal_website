@@ -71,7 +71,8 @@ const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGreg
 - When feature_on_homepage="yes", provide homepage_feature_title and homepage_feature_text as a tighter homepage summary than the main page version.
 - Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion" only when they are notable milestones; otherwise return "none" for timeline_area and highlight_area.
 - Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.
-- Snowboard updates should use gallery_section="Snowboard". Use timeline_area="Snowboarding" for milestones, and highlight_area="Snowboarding" only for qualifications or standout credentials.
+- Snowboard updates should use gallery_section="Snowboard". Ordinary clips should stay in the gallery or Featured Clips rail and should return "none" for page_key, page_section_key, page_section_title, page_section_intro, timeline_area, and highlight_area.
+- Only use timeline_area="Snowboarding" for genuine milestones. Only use highlight_area="Snowboarding" for qualifications or standout credentials.
 - Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.
 - For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.
 - When feature_on_homepage="no", return "none" for homepage_feature_title and homepage_feature_text.
@@ -1336,7 +1337,7 @@ function inferContextFromPath(file) {
   if (/(snow|snowboard|casi|park)/.test(haystack)) {
     return {
       gallerySection: "Snowboard",
-      timelineArea: "Snowboarding",
+      timelineArea: "none",
       highlightArea: "none",
     };
   }
@@ -1416,7 +1417,7 @@ function resolvePageKey(value, sourceFile, gallerySection, timelineArea, highlig
     return "sport";
   }
 
-  if (highlightArea === "Snowboarding" || gallerySection === "Snowboard") {
+  if (highlightArea === "Snowboarding") {
     return "snowboard";
   }
 
@@ -1424,6 +1425,10 @@ function resolvePageKey(value, sourceFile, gallerySection, timelineArea, highlig
 }
 
 function resolvePageSectionKey(value, pageKey, sourceFile, gallerySection, highlightArea) {
+  if (pageKey === "snowboard") {
+    return "none";
+  }
+
   if (value && value !== "none") {
     return slugifyPageSectionKey(value);
   }
