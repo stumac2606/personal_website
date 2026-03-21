@@ -13,7 +13,7 @@ const HIGHLIGHTS_TS_PATH = path.join(ROOT_DIR, "content", "highlights.ts");
 const PAGE_SECTIONS_TS_PATH = path.join(ROOT_DIR, "content", "pageSections.ts");
 const PUBLIC_MEDIA_DIR = path.join(ROOT_DIR, "public", "media");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
   GEMINI_MODEL,
 )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY || "")}`;
@@ -62,21 +62,152 @@ const STYLE_GUIDE =
   "Write in a concise, polished voice that blends elite sport, coaching, and practical engineering. Favor short to mid-length sentences, concrete nouns, and repeatable-systems language over hype. Use occasional dry, self-aware wit when it feels natural, but keep the tone controlled and credible. Prefer compact blurbs with contextual dates when useful, and frame progress as measurable performance, judgment, and craft.";
 const BRAND_GUIDE =
   "Stuart MacGregor's brand sits at the intersection of elite sport, practical engineering, and coaching clarity. Position him as a credible operator: former professional athlete, founder-engineer, and instructor who turns movement into measurable, repeatable systems. Keep the voice lean, commercially credible, and grounded in lived performance, biomechanics, feedback loops, and useful insight rather than generic inspiration or startup hype. When the subject is Motion Dynamics, connect the copy to coaches, athletes, movement data, product proof, and better decisions.";
-const SYSTEM_PROMPT = `You are the autonomous content manager for Stuart MacGregor's website.\n\n${STYLE_GUIDE}\n\n${BRAND_GUIDE}\n\nUse first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never describe Stuart or Motion Dynamics in detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.\n\nEditorial rules:\n- Write publishable website copy, not notes or captions for internal review.\n- Titles must be specific, human, and commercially credible. Prefer 2 to 8 words.\n- Never reuse a raw filename, UUID, hash, or a generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.\n- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use that as context for the title and copy.\n- Avoid vague or inflated phrases such as "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.\n- Business copy should sound like product proof and operator judgement, not startup theatre.\n- Personal copy should sound like lived experience, progression, craft, and clear standards.\n- content_text must usually be a single sentence.\n- Keep content_text short: target 8 to 18 words, and do not exceed 24 words unless absolutely necessary.\n- Do not repeat the full event name, date, or location in content_text if it already appears in the title or metadata.\n- If multiple assets come from the same folder, treat them as one event or story beat and keep naming consistent across the batch.\n\nFolder names, relative paths, and sidecar text files are context hints. Use them aggressively when they are meaningful, especially for videos and batched uploads. Do not mention internal folder names unless they improve the public website copy.\n\nFor each item:\n1. Analyze the content and path context.\n2. Write a human title that fits on a website card.\n3. Write concise website copy in the requested voice. Generate SEO alt text for images.\n4. Map the item to the correct site surfaces.\n\nSite mapping rules:\n- Every image or video should normally have a gallery_section so it appears in the media gallery.\n- Business, startup, product, engineering, golf-analysis, or Motion Dynamics content should usually use gallery_section="Tech". Use page_key and page_section_* to place those media items on the work page, even when they do not need any written summary card above the gallery.
-- Only set timeline_area or highlight_area when the upload is clearly a noteworthy milestone, launch, pitch, competition result, award, or event that deserves a separate written summary block. Routine gallery additions should return "none" for both fields.
-- Use page_key="work" and page_section_key="motion-dynamics" for general company items that do not need a more specific subsection.
-- Use a more specific page_section_key such as "golf-analysis" when the upload clearly represents a distinct product or analysis stream, but keep timeline_area and highlight_area as "none" unless the source context explicitly justifies a summary card.
-- Return page_key="home" when the content should become a homepage section, page_key="sport" for the sport page, page_key="snowboard" for the snowboard page, page_key="about" for the about page, and page_key="contact" only when the content is genuinely about contact, bookings, or availability.
-- Only set feature_on_homepage="yes" when the sidecar note explicitly asks for homepage highlight placement or the source context clearly says it should also be featured on the homepage. Default to "no".
-- When feature_on_homepage="yes", provide homepage_feature_title and homepage_feature_text as a tighter homepage summary than the main page version.
-- Personal life updates should usually use gallery_section="Life in Motion" and timeline_area="Life in Motion" only when they are notable milestones; otherwise return "none" for timeline_area and highlight_area.
-- Squash updates should use gallery_section="Squash" and timeline_area="Squash" only when they are notable milestones.
-- Snowboard updates should use gallery_section="Snowboard". Ordinary clips should stay in the gallery or Featured Clips rail and should return "none" for page_key, page_section_key, page_section_title, page_section_intro, timeline_area, and highlight_area.
-- Only use timeline_area="Snowboarding" for genuine milestones. Only use highlight_area="Snowboarding" for qualifications or standout credentials.
-- Paragliding or flight updates should use gallery_section="Flight" and timeline_area="Paragliding" for milestones.
-- For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.
-- When feature_on_homepage="no", return "none" for homepage_feature_title and homepage_feature_text.
-- If a placement does not apply, return "none" for that placement field.\n\nYou MUST return your analysis as a strict JSON object matching this schema exactly. Do not output markdown code blocks, only raw, valid JSON:\n{\n  "updates": [\n    {\n      "filename": "original_filename.jpg",\n      "title": "Human website title",\n      "alt_text": "...",\n      "content_text": "Your website copy here",\n      "date": "YYYY-MM-DD",\n      "gallery_section": "Squash" | "Tech" | "Flight" | "Snowboard" | "Life in Motion" | "none",\n      "timeline_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Life in Motion" | "none",\n      "highlight_area": "Squash" | "Motion Dynamics" | "Snowboarding" | "Paragliding" | "Hobbies" | "none",\n      "highlight_tag": "qualification" | "award" | "project" | "moment" | "none",\n      "feature_on_homepage": "yes" | "no",\n      "homepage_feature_title": "Short homepage title" | "none",\n      "homepage_feature_text": "Short homepage summary" | "none",\n      "page_key": "home" | "work" | "sport" | "snowboard" | "about" | "contact" | "none",\n      "page_section_key": "motion-dynamics" | "golf-analysis" | "other-slug" | "none",\n      "page_section_title": "Motion Dynamics" | "Golf Analysis" | "Other Title" | "none",\n      "page_section_intro": "Short section intro" | "none"\n    }\n  ]\n}`;
+const SYSTEM_PROMPT = [
+  "You are the autonomous content manager for Stuart MacGregor's personal website.",
+  "",
+  "<voice>",
+  STYLE_GUIDE,
+  "",
+  'Use first-person website voice. For personal sport, instruction, and life updates, prefer "I" and "my". For Motion Dynamics, product, and company updates, prefer "we" and "our". Never use detached third-person language such as "they", "their", "the company", or "the team" unless another team is explicitly shown in the source context.',
+  "</voice>",
+  "",
+  "<brand>",
+  BRAND_GUIDE,
+  "</brand>",
+  "",
+  "<editorial_rules>",
+  "Write publishable website copy, not internal notes or captions. Apply every rule below:",
+  '- Titles: specific, human, and commercially credible. Prefer 2–8 words. Never reuse a raw filename, UUID, hash, or generic label such as "Team photo", "Image", "Video", "Presentation", or "Update" unless the source context clearly justifies it.',
+  "- If a folder or relative path contains a meaningful event, place, competition, product, or clip title, use it as context for the title and copy.",
+  '- Avoid inflated phrases: "key performance indicator", "outreach and networking strategy", "cutting-edge", "game-changing", "world-class", "revolutionary", or empty motivational language.',
+  "- Business copy: product proof and operator judgement — not startup theatre.",
+  "- Personal copy: lived experience, progression, craft, and clear standards.",
+  "- content_text: one sentence only. Target 8–18 words. Hard maximum: 24 words. Do not repeat the event name, date, or location if it already appears in the title.",
+  "- Batched folders: treat all assets from one folder as one event or story beat — keep naming consistent across the batch.",
+  "- Videos: rely on relative path, folder title, filename, and sidecar notes as the primary source of truth. Do not invent frame-level details not explicit in the context.",
+  "</editorial_rules>",
+  "",
+  "<site_mapping>",
+  "Apply these placement defaults by content type. Sidecar notes can override any default.",
+  "",
+  "SQUASH (folder/file contains: squash, psa, tournament, open, match, court):",
+  '  gallery_section="Squash", page_key="sport"',
+  '  timeline_area="Squash" — ONLY for competition results, qualifications, ranking milestones',
+  '  highlight_area="none" unless it is a qualification or award',
+  "",
+  "MOTION DYNAMICS / BUSINESS / STARTUP (folder/file contains: motion dynamics, startup, investor, demo, product, prototype, biomech, analysis, serve, tech, business, pitchup, venturefest, conference, summit, launch, award, finalist):",
+  '  gallery_section="Tech", page_key="work", page_section_key="motion-dynamics" (default) or "golf-analysis" (if golf-specific)',
+  '  timeline_area="Motion Dynamics" — ONLY for launches, awards, finalist placements, investment milestones',
+  '  highlight_area="Motion Dynamics" — ONLY for the same milestone events',
+  "",
+  "SNOWBOARDING (folder/file contains: snow, snowboard, casi, park):",
+  '  gallery_section="Snowboard", page_key="none" for routine clips',
+  '  timeline_area="none" unless a genuine qualification milestone',
+  '  highlight_area="Snowboarding", highlight_tag="qualification" — ONLY for standout qualifications or credentials',
+  "",
+  "PARAGLIDING / FLIGHT (folder/file contains: flight, paraglid, wing, launch):",
+  '  gallery_section="Flight"',
+  '  timeline_area="Paragliding" for significant flights or qualifications',
+  "",
+  "PERSONAL / LIFE (everything else):",
+  '  gallery_section="Life in Motion", timeline_area="Life in Motion" — ONLY for notable personal milestones',
+  '  highlight_area="none" by default',
+  "",
+  "KEY RULES:",
+  '- Every image or video should normally have a gallery_section — not "none".',
+  '- timeline_area and highlight_area must be "none" for routine gallery additions. Use them only for genuine milestones: competition results, product launches, award wins, qualifications, ranking events.',
+  '- feature_on_homepage: Default "no". Set "yes" ONLY when a sidecar note explicitly requests homepage feature placement.',
+  '- When feature_on_homepage="no", return homepage_feature_title="none" and homepage_feature_text="none".',
+  '- When feature_on_homepage="yes", provide homepage_feature_title (≤6 words) and homepage_feature_text (≤14 words) as a tighter homepage summary.',
+  "- page_section_key: Reuse existing section keys from the site inventory below. Only create a new section key when a sidecar note explicitly requests a new section.",
+  '- For items that do not need a dynamic page section, return "none" for page_key, page_section_key, page_section_title, and page_section_intro.',
+  '- If a placement does not apply, return "none" for that field.',
+  "</site_mapping>",
+  "",
+  "<examples>",
+  "Example 1 — Squash match photo (routine gallery addition, NOT a milestone):",
+  JSON.stringify({
+    filename: "bcsa_open_match.jpg",
+    title: "BCSA Open — Glasgow",
+    alt_text: "Competitive squash match at the BCSA Open, Glasgow.",
+    content_text: "First-round win at the BCSA Open on home courts.",
+    date: "2024-11-15",
+    gallery_section: "Squash",
+    timeline_area: "none",
+    highlight_area: "none",
+    highlight_tag: "none",
+    feature_on_homepage: "no",
+    homepage_feature_title: "none",
+    homepage_feature_text: "none",
+    page_key: "sport",
+    page_section_key: "none",
+    page_section_title: "none",
+    page_section_intro: "none",
+  }, null, 2),
+  "",
+  "Example 2 — Motion Dynamics product demo video (routine, NOT a launch milestone):",
+  JSON.stringify({
+    filename: "pose_overlay_demo.mp4",
+    title: "Pose Overlay — Live Demo",
+    alt_text: "Real-time biomechanical pose overlay on squash swing footage.",
+    content_text: "Live demo of our real-time pose overlay on court footage.",
+    date: "2025-01-20",
+    gallery_section: "Tech",
+    timeline_area: "none",
+    highlight_area: "none",
+    highlight_tag: "none",
+    feature_on_homepage: "no",
+    homepage_feature_title: "none",
+    homepage_feature_text: "none",
+    page_key: "work",
+    page_section_key: "motion-dynamics",
+    page_section_title: "Motion Dynamics",
+    page_section_intro: "Product demos, technical milestones, and commercial proof points.",
+  }, null, 2),
+  "",
+  "Example 3 — Business award milestone (IS a milestone — gets timeline + highlight):",
+  JSON.stringify({
+    filename: "venturefest_finalist.jpg",
+    title: "Venturefest Scotland — Finalist",
+    alt_text: "Stuart MacGregor at Venturefest Scotland representing Motion Dynamics.",
+    content_text: "Recognised as a Venturefest finalist for our movement-analysis platform.",
+    date: "2024-09-10",
+    gallery_section: "Tech",
+    timeline_area: "Motion Dynamics",
+    highlight_area: "Motion Dynamics",
+    highlight_tag: "award",
+    feature_on_homepage: "no",
+    homepage_feature_title: "none",
+    homepage_feature_text: "none",
+    page_key: "work",
+    page_section_key: "motion-dynamics",
+    page_section_title: "Motion Dynamics",
+    page_section_intro: "Product demos, technical milestones, and commercial proof points.",
+  }, null, 2),
+  "",
+  "Example 4 — Snowboard clip (routine, gallery only — NOT a qualification):",
+  JSON.stringify({
+    filename: "laax_park_run.mp4",
+    title: "LAAX Park — Spring Session",
+    alt_text: "Snowboard park run at LAAX resort.",
+    content_text: "Spring park session at LAAX — clean lines, good snow.",
+    date: "2025-03-10",
+    gallery_section: "Snowboard",
+    timeline_area: "none",
+    highlight_area: "none",
+    highlight_tag: "none",
+    feature_on_homepage: "no",
+    homepage_feature_title: "none",
+    homepage_feature_text: "none",
+    page_key: "none",
+    page_section_key: "none",
+    page_section_title: "none",
+    page_section_intro: "none",
+  }, null, 2),
+  "</examples>",
+  "",
+  "You MUST return your analysis as a strict JSON object matching the provided schema exactly. Do not output markdown code blocks — only raw, valid JSON.",
+].join("\n");
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -688,12 +819,21 @@ function buildBatchContext(batchFiles) {
     }
 
     const noteParts = value.textFiles.map((file) => {
-      const textContent = readTextLikeFile(file).trim();
-      const concise = textContent.length > 2000
-        ? `${textContent.slice(0, 2000)}\n[TRUNCATED]`
-        : textContent;
+      const rawText = readTextLikeFile(file).trim();
+      const { frontmatter, body } = parseSidecarFrontmatter(rawText);
+      const bodyText = body.length > 2000 ? `${body.slice(0, 2000)}\n[TRUNCATED]` : body;
       contextOnlyFiles.add(file.localRelativePath);
-      return `Note from ${file.filename}:\n${concise}`;
+
+      if (frontmatter) {
+        const directives = Object.entries(frontmatter)
+          .map(([k, v]) => `  ${k}: ${v}`)
+          .join("\n");
+        const parts = [`Structured directives from ${file.filename}:\n${directives}`];
+        if (bodyText) parts.push(`Additional context:\n${bodyText}`);
+        return parts.join("\n");
+      }
+
+      return `Note from ${file.filename}:\n${bodyText}`;
     });
 
     folderNotesByFolder.set(folderKey, noteParts.join("\n\n"));
@@ -789,10 +929,31 @@ function getPreferredExtension(absolutePath, mimeType) {
   return extensionMap[mimeType] || ".bin";
 }
 
+function readExistingSections() {
+  try {
+    const contents = fs.readFileSync(PAGE_SECTIONS_TS_PATH, "utf8");
+    const sections = [];
+    const blockPattern = /\{[^}]*page:\s*"([^"]+)"[^}]*key:\s*"([^"]+)"[^}]*title:\s*"([^"]+)"[^}]*/g;
+    for (const match of contents.matchAll(blockPattern)) {
+      const [, page, key, title] = match;
+      sections.push(`  page="${page}" key="${key}" title="${title}"`);
+    }
+    if (sections.length === 0) return null;
+    return [
+      "Existing page sections — reuse these keys instead of creating new ones (only create a new section when a sidecar note explicitly requests it):",
+      ...sections,
+    ].join("\n");
+  } catch {
+    return null;
+  }
+}
+
 async function sendGeminiRequest(batchFiles, batchContext) {
+  const siteInventory = readExistingSections();
   const parts = [
     {
       text: [
+        ...(siteInventory ? [siteInventory, ""] : []),
         "Batch manifest:",
         ...batchFiles.map((file, index) => {
           const sourceDate = file.modifiedTime
@@ -1028,6 +1189,25 @@ function readTextLikeFile(file) {
   }
 
   return fs.readFileSync(file.absolutePath, "utf8");
+}
+
+function parseSidecarFrontmatter(text) {
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)([\s\S]*)/);
+  if (!match) return { frontmatter: null, body: text };
+
+  const frontmatter = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const colonIndex = line.indexOf(":");
+    if (colonIndex === -1) continue;
+    const key = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1).trim();
+    if (key && value) frontmatter[key] = value;
+  }
+
+  return {
+    frontmatter: Object.keys(frontmatter).length > 0 ? frontmatter : null,
+    body: (match[3] || "").trim(),
+  };
 }
 
 function humanizeFilename(filename) {
